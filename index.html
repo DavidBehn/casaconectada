@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Casa Conectada</title>
   <style>
-    /* (Mesmo CSS que você tinha – completo e otimizado para celular, com media queries para não empilhar demais) */
+    /* Mesmo CSS completo que você tinha – otimizado para celular */
     *{margin:0;padding:0;box-sizing:border-box;font-family:Roboto,Arial,sans-serif;}
     html{height:100%;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
     body{height:100%;overflow-x:hidden;margin:0;background:#000;position:relative;}
@@ -136,40 +136,7 @@
     const relayNamesLocal = Array(NUM_RELAYS).fill("Relé ");
     const schedData = Array(NUM_RELAYS).fill({enabled: false, onH: 7, onM: 0, offH: 18, offM: 0});
 
-    function connectMQTT() {
-      const options = {
-        connectTimeout: 5000,
-        clientId: 'web_' + Math.random().toString(16).substr(2, 8),
-        keepalive: 60,
-        clean: true,
-      };
-
-      client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', options);
-
-      client.on('connect', () => {
-        document.getElementById('connectionStatus').textContent = 'Conectado';
-        document.getElementById('connectionStatus').classList.add('connected');
-        client.subscribe('casa/status');
-        createRelaysCards();  // Cria com defaults
-      });
-
-      client.on('offline', () => {
-        document.getElementById('connectionStatus').textContent = 'Desconectado';
-        document.getElementById('connectionStatus').classList.remove('connected');
-      });
-
-      client.on('message', (topic, message) => {
-        if (topic === 'casa/status') {
-          try {
-            const data = JSON.parse(message.toString());
-            updateFromJSON(data);  // Atualiza nomes, ícones, agendamento, estados e contadores
-          } catch (e) {
-            console.error('Erro JSON:', e);
-          }
-        }
-      });
-    }
-
+    // Cria os cards ANTES da conexão (com defaults)
     function createRelaysCards() {
       const c = document.getElementById("devices");
       c.innerHTML = "";
@@ -209,6 +176,40 @@
       document.getElementById("offCount").innerText = NUM_RELAYS;
     }
 
+    function connectMQTT() {
+      const options = {
+        connectTimeout: 5000,
+        clientId: 'web_' + Math.random().toString(16).substr(2, 8),
+        keepalive: 60,
+        clean: true,
+      };
+
+      client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', options);
+
+      client.on('connect', () => {
+        document.getElementById('connectionStatus').textContent = 'Conectado';
+        document.getElementById('connectionStatus').classList.add('connected');
+        client.subscribe('casa/status');
+      });
+
+      client.on('offline', () => {
+        document.getElementById('connectionStatus').textContent = 'Desconectado';
+        document.getElementById('connectionStatus').classList.remove('connected');
+      });
+
+      client.on('message', (topic, message) => {
+        if (topic === 'casa/status') {
+          try {
+            const data = JSON.parse(message.toString());
+            updateFromJSON(data);  // Atualiza TUDO das configurações salvas
+          } catch (e) {
+            console.error('Erro JSON:', e);
+          }
+        }
+      });
+    }
+
+    // Atualiza com as configurações salvas na EEPROM
     function updateFromJSON(data) {
       let on = 0, off = 0;
       for (let i = 0; i < NUM_RELAYS; i++) {
@@ -314,6 +315,10 @@
       btn.onmouseup = btn.onmouseleave = btn.ontouchend = () => clearTimeout(pressTimer);
     });
 
+    // Cria os cards antes da conexão (com defaults)
+    createRelaysCards();
+
+    // Conecta MQTT
     window.onload = connectMQTT;
   </script>
 </body>
