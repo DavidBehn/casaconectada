@@ -156,14 +156,14 @@
 
         if (topic === 'casa/num_relays') {
           NUM_RELAYS = parseInt(msg);
-          if (NUM_RELAYS > 0) initializeRelays();
+          if (NUM_RELAYS > 0) createRelaysCards();  // Cria os cards dinamicamente
           return;
         }
 
         if (topic === 'casa/status') {
           try {
             const data = JSON.parse(msg);
-            updateFromJSON(data);
+            updateRelaysFromJSON(data);  // Atualiza apenas o necessário (mais rápido)
           } catch (e) {
             console.error('Erro ao processar status:', e);
           }
@@ -171,15 +171,18 @@
       });
     }
 
-    function initializeRelays() {
-      const c = document.getElementById("devices");
-      c.innerHTML = "";
+    // Cria os cards dinamicamente com base no número de relés
+    function createRelaysCards() {
+      const container = document.getElementById("devices");
+      container.innerHTML = "";  // Limpa
+
       for (let i = 1; i <= NUM_RELAYS; i++) {
         relayNamesLocal[i-1] = "Relé " + i;
         schedData[i-1] = {enabled: false, onH: 7, onM: 0, offH: 18, offM: 0};
 
         const card = document.createElement("div");
         card.className = "device-card";
+        card.id = "card" + i;
         card.innerHTML = `
           <div class="gear-icon" id="gear${i}" onclick="openModal(${i})">
             <img src="https://raw.githubusercontent.com/davidbehn/casaconectada/main/gear.svg" alt="Config">
@@ -194,8 +197,9 @@
             <button class="btn-off" onclick="sendCommand('toggle',${i},false)">OFF</button>
           </div>
           <div class="icon-selector" id="sel${i}"></div>`;
-        c.appendChild(card);
+        container.appendChild(card);
 
+        // Cria seletor de ícones
         const sel = document.getElementById("sel" + i);
         iconFiles.forEach((src, idx) => {
           const opt = document.createElement("div");
@@ -215,11 +219,13 @@
       document.getElementById("offCount").innerText = NUM_RELAYS;
     }
 
-    function updateFromJSON(data) {
+    // Atualiza apenas os elementos necessários (mais rápido)
+    function updateRelaysFromJSON(data) {
       let on = 0, off = 0;
       for (let i = 0; i < NUM_RELAYS; i++) {
-        if (data.hasOwnProperty("relay" + i)) {
-          const state = data["relay" + i];
+        const key = "relay" + i;
+        if (data.hasOwnProperty(key)) {
+          const state = data[key];
           const name = data["name" + i] || "Relé " + (i+1);
           const iconIdx = data["icon" + i] ?? 0;
           const enabled = data["schedEnabled" + i] ?? false;
@@ -238,7 +244,7 @@
 
           if (nameEl) nameEl.innerText = name;
           if (imgEl) imgEl.src = iconFiles[iconIdx];
-          if (gearEl) (enabled ? gearEl.classList.add("active") : gearEl.classList.remove("active"));
+          if (gearEl) gearEl.classList.toggle("active", enabled);
           if (statusEl) {
             statusEl.innerText = state ? "LIGADO" : "DESLIGADO";
             statusEl.className = "status " + (state ? "on" : "off");
@@ -267,7 +273,7 @@
     function openModal(id) {
       currentRelay = id - 1;
       document.getElementById("modalRelayName").innerText = relayNamesLocal[currentRelay] || "Relé";
-      const d = schedData[currentRelay] || {enabled:false, onH:7, onM:0, offH:18, offM:0};
+      const d = schedData[currentRelay] || {enabled: false, onH: 7, onM: 0, offH: 18, offM: 0};
       document.getElementById("schedEnabled").checked = d.enabled;
       document.getElementById("onTime").value = `${String(d.onH).padStart(2,'0')}:${String(d.onM).padStart(2,'0')}`;
       document.getElementById("offTime").value = `${String(d.offH).padStart(2,'0')}:${String(d.offM).padStart(2,'0')}`;
