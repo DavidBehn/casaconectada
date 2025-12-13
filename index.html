@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Casa Conectada</title>
   <style>
+    /* (Mesmo CSS que você tinha – completo e otimizado para celular, com media queries para não empilhar demais) */
     *{margin:0;padding:0;box-sizing:border-box;font-family:Roboto,Arial,sans-serif;}
     html{height:100%;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
     body{height:100%;overflow-x:hidden;margin:0;background:#000;position:relative;}
@@ -132,7 +133,7 @@
     let client = null;
     let pressTimer = null;
 
-    const relayNamesLocal = Array(NUM_RELAYS).fill("").map((_, i) => "Relé " + (i+1));
+    const relayNamesLocal = Array(NUM_RELAYS).fill("Relé ");
     const schedData = Array(NUM_RELAYS).fill({enabled: false, onH: 7, onM: 0, offH: 18, offM: 0});
 
     function connectMQTT() {
@@ -149,7 +150,7 @@
         document.getElementById('connectionStatus').textContent = 'Conectado';
         document.getElementById('connectionStatus').classList.add('connected');
         client.subscribe('casa/status');
-        createRelaysCards();  // Cria cards imediatamente
+        createRelaysCards();  // Cria com defaults
       });
 
       client.on('offline', () => {
@@ -161,7 +162,7 @@
         if (topic === 'casa/status') {
           try {
             const data = JSON.parse(message.toString());
-            updateFromJSON(data);
+            updateFromJSON(data);  // Atualiza nomes, ícones, agendamento, estados e contadores
           } catch (e) {
             console.error('Erro JSON:', e);
           }
