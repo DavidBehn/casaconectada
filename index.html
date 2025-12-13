@@ -20,8 +20,8 @@
     .connection-status.connected{color:#90ee90;}
     .on-count{color:#90ee90;font-weight:600;}
     .off-count{color:#ff6b6b;font-weight:600;}
-    .devices-container{width:100%;max-width:900px;display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));padding:10px;} /* Corrigi largura mínima para evitar empilhamento excessivo */
-    .device-card{background:rgba(255,255,255,0.15);padding:18px;border-radius:22px;box-shadow:0 3px 10px rgba(0,0,0,0.3);text-align:center;transition:.25s;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);min-width:160px;}
+    .devices-container{width:100%;max-width:900px;display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));padding:0 10px;justify-items:center;}
+    .device-card{background:rgba(255,255,255,0.15);padding:20px;border-radius:22px;box-shadow:0 3px 10px rgba(0,0,0,0.3);text-align:center;transition:.25s;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);min-width:180px;width:100%;max-width:220px;}
     .device-card:hover{transform:translateY(-4px);box-shadow:0 6px 18px rgba(0,0,0,0.5);}
     .icon-circle{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,0.25);margin:0 auto 14px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
     .icon-circle img{width:32px;height:32px;}
@@ -60,7 +60,17 @@
     .checkbox-group label{margin:0;font-weight:600;cursor:pointer;flex:1;}
     .save-btn{background:#3b6cff;color:white;padding:10px 20px;border:none;border-radius:12px;cursor:pointer;font-size:15px;width:100%;}
     .save-btn:hover{background:#2a52d8;}
-    @media (max-width:480px){h1{font-size:22px;margin-bottom:6px;}.logo{height:40px;}.top-header{gap:12px;}.title-block h1{white-space:normal;}.devices-container{grid-template-columns:1fr;}}
+    @media (max-width:600px){
+      .devices-container{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:15px;}
+      .device-card{min-width:150px;padding:15px;}
+      .general-buttons{gap:15px;}
+      .general-btn{padding:12px 24px;font-size:15px;}
+    }
+    @media (max-width:400px){
+      .devices-container{grid-template-columns:1fr;}
+      .top-header{gap:10px;}
+      h1{font-size:22px;}
+    }
   </style>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 </head>
@@ -107,7 +117,6 @@
   </div>
 
   <script>
-    // Número de relés fixo (igual ao do ESP32)
     const NUM_RELAYS = 12;
 
     const iconFiles = [
@@ -123,8 +132,8 @@
     let client = null;
     let pressTimer = null;
 
-    const relayNamesLocal = new Array(NUM_RELAYS).fill("Relé ");
-    const schedData = new Array(NUM_RELAYS).fill({enabled: false, onH: 7, onM: 0, offH: 18, offM: 0});
+    const relayNamesLocal = Array(NUM_RELAYS).fill("").map((_, i) => "Relé " + (i+1));
+    const schedData = Array(NUM_RELAYS).fill({enabled: false, onH: 7, onM: 0, offH: 18, offM: 0});
 
     function connectMQTT() {
       const options = {
@@ -190,7 +199,7 @@
           opt.onclick = e => {
             e.stopPropagation();
             document.getElementById("img" + i).src = src;
-            sendCommand({type:"icon",relay:i,icon:idx});
+            sendCommand({type: "icon", relay: i, icon: idx});
             sel.style.display = "none";
           };
           sel.appendChild(opt);
@@ -244,7 +253,65 @@
       sendCommand({type: "toggle", relay: id, state: state});
     }
 
-    // (o resto das funções: openModal, closeModal, saveSchedule, toggleSelector, editName, botões gerais – igual ao anterior)
+    function openModal(id) {
+      currentRelay = id - 1;
+      document.getElementById("modalRelayName").innerText = relayNamesLocal[currentRelay];
+      const d = schedData[currentRelay];
+      document.getElementById("schedEnabled").checked = d.enabled;
+      document.getElementById("onTime").value = `${String(d.onH).padStart(2,'0')}:${String(d.onM).padStart(2,'0')}`;
+      document.getElementById("offTime").value = `${String(d.offH).padStart(2,'0')}:${String(d.offM).padStart(2,'0')}`;
+      document.getElementById("scheduleModal").style.display = "flex";
+    }
+
+    function closeModal() {
+      document.getElementById("scheduleModal").style.display = "none";
+    }
+
+    function saveSchedule() {
+      const enabled = document.getElementById("schedEnabled").checked;
+      const onTime = document.getElementById("onTime").value || "07:00";
+      const offTime = document.getElementById("offTime").value || "18:00";
+      const [onH, onM] = onTime.split(':').map(Number);
+      const [offH, offM] = offTime.split(':').map(Number);
+      sendCommand({type: "schedule", relay: currentRelay + 1, enabled, onHour: onH, onMin: onM, offHour: offH, offMin: offM});
+      closeModal();
+    }
+
+    function toggleSelector(id) {
+      document.querySelectorAll('.icon-selector').forEach(s => s.style.display = 'none');
+      const sel = document.getElementById("sel" + id);
+      if (sel) sel.style.display = (sel.style.display === 'flex') ? 'none' : 'flex';
+    }
+
+    function editName(el, id) {
+      el.contentEditable = true;
+      el.focus();
+      document.execCommand('selectAll');
+      const save = () => {
+        let n = el.innerText.trim() || "Relé " + id;
+        if (n.length > 28) n = n.substring(0, 28);
+        el.innerText = n;
+        el.contentEditable = false;
+        sendCommand({type: "name", relay: id, name: n});
+      };
+      el.onblur = save;
+      el.onkeydown = e => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          save();
+        }
+      };
+    }
+
+    ["btnOnAll", "btnOffAll"].forEach(b => {
+      const btn = document.getElementById(b);
+      const state = (b === "btnOnAll");
+      btn.onmousedown = btn.ontouchstart = e => {
+        e.preventDefault();
+        pressTimer = setTimeout(() => sendCommand({type: "all", state: state}), 900);
+      };
+      btn.onmouseup = btn.onmouseleave = btn.ontouchend = () => clearTimeout(pressTimer);
+    });
 
     window.onload = connectMQTT;
   </script>
