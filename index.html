@@ -71,7 +71,7 @@
     <div class="title-block">
       <h1>Casa Conectada</h1>
       <div class="status-summary">
-        Ligados: <span class="on-count" id="onCount">0</span> • Desligados: <span class="off-count" id="offCount">aguardando...</span>
+        Ligados: <span class="on-count" id="onCount">0</span> • Desligados: <span class="off-count" id="offCount">carregando...</span>
       </div>
     </div>
   </div>
@@ -109,12 +109,14 @@
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <script>
 const iconFiles = ["icon0.svg","icon1.svg","icon2.svg","icon3.svg","icon4.svg","icon5.svg"];
-let NUM_RELAYS = 0; // Será definido pela primeira mensagem de status
+
+// <<< ALTERE AQUI O NÚMERO DE RELÉS CONFORME SEU ESP32 >>>
+const NUM_RELAYS = 12;
+
 let currentRelay = 0;
 let client;
-const relayNamesLocal = [];
-const schedData = [];
-let relaysLoaded = false;
+const relayNamesLocal = new Array(NUM_RELAYS).fill("").map((_, i) => `Relé ${i+1}`);
+const schedData = new Array(NUM_RELAYS).fill({enabled: false, onH: 7, onM: 0, offH: 18, offM: 0});
 
 function loadRelays() {
   const c = document.getElementById("devices");
@@ -152,32 +154,14 @@ function loadRelays() {
       sel.appendChild(opt);
     });
   }
-  relaysLoaded = true;
 }
 
 function updateStatus(data) {
-  // Detecta o número de relés pela primeira vez
-  if (NUM_RELAYS === 0) {
-    for (let i = 0; ; i++) {
-      if (!data.hasOwnProperty("relay" + i)) {
-        NUM_RELAYS = i;
-        break;
-      }
-    }
-    if (NUM_RELAYS > 0) {
-      for (let i = 0; i < NUM_RELAYS; i++) {
-        relayNamesLocal[i] = "Relé " + (i+1);
-        schedData[i] = {enabled: false, onH: 7, onM: 0, offH: 18, offM: 0};
-      }
-      loadRelays();
-    }
-  }
-
   let on = 0, off = 0;
   for(let i = 0; i < NUM_RELAYS; i++) {
     if(data.hasOwnProperty("relay"+i)) {
       const state = data["relay"+i];
-      const name = data["name"+i] || "Relé "+(i+1);
+      const name = data["name"+i] || `Relé ${i+1}`;
       const iconIdx = data["icon"+i] ?? 0;
       const enabled = data["schedEnabled"+i] ?? false;
       const onH = data["onHour"+i] ?? 7;
@@ -223,7 +207,7 @@ function connectMQTT() {
       const data = JSON.parse(message.toString());
       updateStatus(data);
     } catch (err) {
-      console.error("Erro ao processar mensagem MQTT:", err);
+      console.error("Erro ao processar mensagem:", err);
     }
   });
 
@@ -244,8 +228,8 @@ function sendCommand(obj) {
 
 function openModal(id) {
   currentRelay = id - 1;
-  document.getElementById("modalRelayName").innerText = relayNamesLocal[currentRelay] || "Relé";
-  const d = schedData[currentRelay] || {enabled:false, onH:7, onM:0, offH:18, offM:0};
+  document.getElementById("modalRelayName").innerText = relayNamesLocal[currentRelay];
+  const d = schedData[currentRelay];
   document.getElementById("schedEnabled").checked = d.enabled;
   document.getElementById("onTime").value = `${String(d.onH).padStart(2,'0')}:${String(d.onM).padStart(2,'0')}`;
   document.getElementById("offTime").value = `${String(d.offH).padStart(2,'0')}:${String(d.offM).padStart(2,'0')}`;
@@ -267,36 +251,42 @@ function saveSchedule() {
 function toggleSelector(id) {
   document.querySelectorAll('.icon-selector').forEach(s => s.style.display='none');
   const sel = document.getElementById("sel"+id);
-  sel.style.display = (sel.style.display==='flex') ? 'none' : 'flex';
+  sel.style.display = (sel.style.display === 'flex') ? 'none' : 'flex';
 }
 
 function editName(el, id) {
   el.contentEditable = true; el.focus();
-  document.execCommand('selectAll');
+  document.execCommand('selectAll', false, null);
   const save = () => {
-    let n = el.innerText.trim() || "Relé "+id;
-    if(n.length>28) n=n.substring(0,28);
-    el.innerText = n; el.contentEditable = false;
+    let n = el.innerText.trim() || `Relé ${id}`;
+    if (n.length > 28) n = n.substring(0, 28);
+    el.innerText = n;
+    el.contentEditable = false;
     sendCommand({type:"name",relay:id,name:n});
   };
   el.onblur = save;
-  el.onkeydown = e => {if(e.key==="Enter"){e.preventDefault();save();}}
+  el.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); save(); } };
 }
 
-function toggle(id,state){
+function toggle(id, state) {
   sendCommand({type:"toggle",relay:id,state:state});
 }
 
-["btnOnAll","btnOffAll"].forEach(b=>{
-  const btn=document.getElementById(b);
-  const state = (b==="btnOnAll");
+["btnOnAll","btnOffAll"].forEach(b => {
+  const btn = document.getElementById(b);
+  const state = (b === "btnOnAll");
   let pressTimer;
-  btn.onmousedown = btn.ontouchstart = e=>{e.preventDefault();pressTimer=setTimeout(()=>{
-    sendCommand({type:"all",state:state});
-  },900);};
-  btn.onmouseup = btn.onmouseleave = btn.ontouchend = ()=>clearTimeout(pressTimer);
+  btn.onmousedown = btn.ontouchstart = e => {
+    e.preventDefault();
+    pressTimer = setTimeout(() => {
+      sendCommand({type:"all",state:state});
+    }, 900);
+  };
+  btn.onmouseup = btn.onmouseleave = btn.ontouchend = () => clearTimeout(pressTimer);
 });
 
+// Carrega os cartões imediatamente ao abrir a página
+loadRelays();
 connectMQTT();
 </script>
 </body>
