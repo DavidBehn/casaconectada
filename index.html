@@ -4,18 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Casa Conectada - Painel Remoto</title>
-<link rel="icon" type="image/x-icon" href="https://raw.githubusercontent.com/seuusuario/casa-conectada/main/favicon.ico">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;font-family:Roboto,Arial,sans-serif;}
   html{height:100%;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
   body{height:100%;overflow-x:hidden;margin:0;background:#000;position:relative;}
-  .background{position:fixed;top:-50vh;left:0;right:0;bottom:-50vh;background:url('https://raw.githubusercontent.com/seuusuario/casa-conectada/main/image.jpg') no-repeat center center;background-size:cover;z-index:-2;}
+  .background{position:fixed;top:-50vh;left:0;right:0;bottom:-50vh;background:url('https://raw.githubusercontent.com/davidbehn/casaconectada/main/image.jpg') no-repeat center center;background-size:cover;z-index:-2;}
   .background::after{content:"";position:absolute;inset:0;background:rgba(0,0,0,0.45);z-index:-1;}
   .main-content{position:relative;z-index:1;min-height:100vh;padding:20px;display:flex;flex-direction:column;align-items:center;color:#fff;}
   .top-header{display:flex;align-items:center;justify-content:center;gap:20px;width:100%;max-width:900px;flex-wrap:wrap;margin-bottom:20px;}
   .logo{height:50px;width:auto;max-width:200px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.7));}
   .title-block{display:flex;flex-direction:column;justify-content:center;text-align:center;}
-  h1{font-size:26px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.6);margin:0 0 8px 0;white-space:nowrap;}
+  h1{font-size:26px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.6);margin:0 0 8px 0;}
   .status-summary{font-size:16px;color:#ddd;text-shadow:0 1px 2px rgba(0,0,0,0.6);}
   .connection-status{font-size:14px;margin-top:8px;color:#ff6b6b;}
   .connection-status.connected{color:#90ee90;}
@@ -61,16 +60,14 @@
   .checkbox-group label{margin:0;font-weight:600;cursor:pointer;flex:1;}
   .save-btn{background:#3b6cff;color:white;padding:10px 20px;border:none;border-radius:12px;cursor:pointer;font-size:15px;width:100%;}
   .save-btn:hover{background:#2a52d8;}
-  @media (max-width:480px){h1{font-size:22px;margin-bottom:6px;}.logo{height:40px;}.top-header{gap:12px;}.title-block h1{white-space:normal;}}
 </style>
-<!-- MQTT Client - Paho -->
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 </head>
 <body>
 <div class="background"></div>
 <div class="main-content">
   <div class="top-header">
-    <img class="logo" src="https://raw.githubusercontent.com/seuusuario/casa-conectada/main/logo.png" alt="Logo">
+    <img class="logo" src="https://raw.githubusercontent.com/davidbehn/casaconectada/main/logo.png" alt="Logo">
     <div class="title-block">
       <h1>Casa Conectada</h1>
       <div class="status-summary">
@@ -110,26 +107,26 @@
 
 <script>
 const iconFiles = [
-  "https://raw.githubusercontent.com/seuusuario/casa-conectada/main/icon0.svg",
-  "https://raw.githubusercontent.com/seuusuario/casa-conectada/main/icon1.svg",
-  "https://raw.githubusercontent.com/seuusuario/casa-conectada/main/icon2.svg",
-  "https://raw.githubusercontent.com/seuusuario/casa-conectada/main/icon3.svg",
-  "https://raw.githubusercontent.com/seuusuario/casa-conectada/main/icon4.svg",
-  "https://raw.githubusercontent.com/seuusuario/casa-conectada/main/icon5.svg"
+  "https://raw.githubusercontent.com/davidbehn/casaconectada/main/icon0.svg",
+  "https://raw.githubusercontent.com/davidbehn/casaconectada/main/icon1.svg",
+  "https://raw.githubusercontent.com/davidbehn/casaconectada/main/icon2.svg",
+  "https://raw.githubusercontent.com/davidbehn/casaconectada/main/icon3.svg",
+  "https://raw.githubusercontent.com/davidbehn/casaconectada/main/icon4.svg",
+  "https://raw.githubusercontent.com/davidbehn/casaconectada/main/icon5.svg"
 ];
 
 let NUM_RELAYS = 0;
 let currentRelay = 0;
-let client;
+let client = null;
 let pressTimer;
+
 const relayNamesLocal = [];
 const schedData = [];
 
-// Conexão MQTT
 function connectMQTT() {
   const options = {
-    connectTimeout: 4000,
-    clientId: 'web_client_' + Math.random().toString(16).substr(2, 8),
+    connectTimeout: 5000,
+    clientId: 'web_' + Math.random().toString(16).substr(2, 8),
     keepalive: 60,
     clean: true,
   };
@@ -137,24 +134,20 @@ function connectMQTT() {
   client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', options);
 
   client.on('connect', () => {
-    console.log('Conectado ao broker MQTT');
     document.getElementById('connectionStatus').textContent = 'Conectado';
     document.getElementById('connectionStatus').classList.add('connected');
-
-    // Inscreve nos topics
     client.subscribe('casa/num_relays');
     client.subscribe('casa/status');
   });
 
   client.on('offline', () => {
-    console.log('Broker offline');
     document.getElementById('connectionStatus').textContent = 'Desconectado';
     document.getElementById('connectionStatus').classList.remove('connected');
   });
 
   client.on('error', (err) => {
-    console.error('Erro MQTT:', err);
-    document.getElementById('connectionStatus').textContent = 'Erro na conexão';
+    console.error('MQTT Error:', err);
+    document.getElementById('connectionStatus').textContent = 'Erro de conexão';
   });
 
   client.on('message', (topic, message) => {
@@ -162,8 +155,7 @@ function connectMQTT() {
 
     if (topic === 'casa/num_relays') {
       NUM_RELAYS = parseInt(msg);
-      console.log('Número de relés:', NUM_RELAYS);
-      initializeRelays();
+      if (NUM_RELAYS > 0) initializeRelays();
       return;
     }
 
@@ -172,7 +164,7 @@ function connectMQTT() {
         const data = JSON.parse(msg);
         updateFromJSON(data);
       } catch (e) {
-        console.error('JSON inválido:', e);
+        console.error('Erro ao parsear status:', e);
       }
     }
   });
@@ -181,15 +173,12 @@ function connectMQTT() {
 function initializeRelays() {
   const c = document.getElementById("devices");
   c.innerHTML = "";
-  for(let i = 1; i <= NUM_RELAYS; i++) {
-    relayNamesLocal[i-1] = "Relé " + i;
-    schedData[i-1] = {enabled: false, onH: 7, onM: 0, offH: 18, offM: 0};
-
+  for (let i = 1; i <= NUM_RELAYS; i++) {
     const card = document.createElement("div");
     card.className = "device-card";
     card.innerHTML = `
       <div class="gear-icon" id="gear${i}" onclick="openModal(${i})">
-        <img src="https://raw.githubusercontent.com/seuusuario/casa-conectada/main/gear.svg" alt="Config">
+        <img src="https://raw.githubusercontent.com/davidbehn/casaconectada/main/gear.svg" alt="Config">
       </div>
       <div class="icon-circle" ondblclick="toggleSelector(${i})">
         <img id="img${i}" src="${iconFiles[0]}">
@@ -203,28 +192,27 @@ function initializeRelays() {
       <div class="icon-selector" id="sel${i}"></div>`;
     c.appendChild(card);
 
-    const sel = document.getElementById("sel"+i);
+    const sel = document.getElementById("sel" + i);
     iconFiles.forEach((src, idx) => {
       const opt = document.createElement("div");
       opt.className = "icon-option";
       opt.innerHTML = `<img src="${src}">`;
       opt.onclick = e => {
         e.stopPropagation();
-        document.getElementById("img"+i).src = src;
+        document.getElementById("img" + i).src = src;
         sendCommand('icon', i, idx);
         sel.style.display = "none";
       };
       sel.appendChild(opt);
     });
   }
-
   document.getElementById("onCount").innerText = 0;
   document.getElementById("offCount").innerText = NUM_RELAYS;
 }
 
 function updateFromJSON(data) {
   let on = 0, off = 0;
-  for(let i = 0; i < NUM_RELAYS; i++) {
+  for (let i = 0; i < NUM_RELAYS; i++) {
     if (data.hasOwnProperty("relay" + i)) {
       const state = data["relay" + i];
       const name = data["name" + i] || "Relé " + (i+1);
@@ -261,13 +249,17 @@ function updateFromJSON(data) {
 function sendCommand(type, relay, value) {
   if (!client || !client.connected) return;
 
-  let payload = {type: type, relay: relay};
+  let payload = {type: type};
+  if (relay !== null) payload.relay = relay;
   if (type === "toggle" || type === "all") payload.state = value;
   if (type === "icon") payload.icon = value;
   if (type === "name") payload.name = value;
+  if (type === "schedule") payload = {...payload, ...value};
 
   client.publish('casa/command', JSON.stringify(payload));
 }
+
+// Funções modal, saveSchedule, editName, etc. (iguais às anteriores)
 
 function openModal(id) {
   currentRelay = id - 1;
@@ -279,9 +271,7 @@ function openModal(id) {
   document.getElementById("scheduleModal").style.display = "flex";
 }
 
-function closeModal() {
-  document.getElementById("scheduleModal").style.display = "none";
-}
+function closeModal() { document.getElementById("scheduleModal").style.display = "none"; }
 
 function saveSchedule() {
   const enabled = document.getElementById("schedEnabled").checked;
@@ -289,7 +279,6 @@ function saveSchedule() {
   const offTime = document.getElementById("offTime").value || "18:00";
   const [onH, onM] = onTime.split(':').map(Number);
   const [offH, offM] = offTime.split(':').map(Number);
-
   sendCommand("schedule", currentRelay + 1, {enabled, onHour: onH, onMin: onM, offHour: offH, offMin: offM});
   closeModal();
 }
