@@ -71,7 +71,7 @@
     <div class="title-block">
       <h1>Casa Conectada</h1>
       <div class="status-summary">
-        Ligados: <span class="on-count" id="onCount">0</span> • Desligados: <span class="off-count" id="offCount">carregando...</span>
+        Ligados: <span class="on-count" id="onCount">0</span> • Desligados: <span class="off-count" id="offCount">aguardando...</span>
       </div>
     </div>
   </div>
@@ -109,11 +109,12 @@
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <script>
 const iconFiles = ["icon0.svg","icon1.svg","icon2.svg","icon3.svg","icon4.svg","icon5.svg"];
-let NUM_RELAYS = 12; // Você pode alterar se mudar no ESP32
+let NUM_RELAYS = 0; // Será definido pela primeira mensagem de status
 let currentRelay = 0;
 let client;
 const relayNamesLocal = [];
 const schedData = [];
+let relaysLoaded = false;
 
 function loadRelays() {
   const c = document.getElementById("devices");
@@ -136,6 +137,7 @@ function loadRelays() {
       </div>
       <div class="icon-selector" id="sel${i}"></div>`;
     c.appendChild(card);
+
     const sel = document.getElementById("sel"+i);
     iconFiles.forEach((src, idx) => {
       const opt = document.createElement("div");
@@ -150,6 +152,59 @@ function loadRelays() {
       sel.appendChild(opt);
     });
   }
+  relaysLoaded = true;
+}
+
+function updateStatus(data) {
+  // Detecta o número de relés pela primeira vez
+  if (NUM_RELAYS === 0) {
+    for (let i = 0; ; i++) {
+      if (!data.hasOwnProperty("relay" + i)) {
+        NUM_RELAYS = i;
+        break;
+      }
+    }
+    if (NUM_RELAYS > 0) {
+      for (let i = 0; i < NUM_RELAYS; i++) {
+        relayNamesLocal[i] = "Relé " + (i+1);
+        schedData[i] = {enabled: false, onH: 7, onM: 0, offH: 18, offM: 0};
+      }
+      loadRelays();
+    }
+  }
+
+  let on = 0, off = 0;
+  for(let i = 0; i < NUM_RELAYS; i++) {
+    if(data.hasOwnProperty("relay"+i)) {
+      const state = data["relay"+i];
+      const name = data["name"+i] || "Relé "+(i+1);
+      const iconIdx = data["icon"+i] ?? 0;
+      const enabled = data["schedEnabled"+i] ?? false;
+      const onH = data["onHour"+i] ?? 7;
+      const onM = data["onMin"+i] ?? 0;
+      const offH = data["offHour"+i] ?? 18;
+      const offM = data["offMin"+i] ?? 0;
+
+      schedData[i] = {enabled, onH, onM, offH, offM};
+      relayNamesLocal[i] = name;
+
+      const nameEl = document.getElementById("name"+(i+1));
+      const imgEl = document.getElementById("img"+(i+1));
+      const gearEl = document.getElementById("gear"+(i+1));
+      const statusEl = document.getElementById("status"+(i+1));
+
+      if (nameEl) nameEl.innerText = name;
+      if (imgEl) imgEl.src = iconFiles[iconIdx];
+      if (gearEl) gearEl.classList.toggle("active", enabled);
+      if (statusEl) {
+        statusEl.innerText = state ? "LIGADO" : "DESLIGADO";
+        statusEl.className = "status " + (state ? "on" : "off");
+      }
+      state ? on++ : off++;
+    }
+  }
+  document.getElementById("onCount").innerText = on;
+  document.getElementById("offCount").innerText = off;
 }
 
 function connectMQTT() {
@@ -157,7 +212,7 @@ function connectMQTT() {
   client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {clientId});
 
   client.on('connect', () => {
-    document.getElementById("connStatus").innerText = "Conectado (MQTT)";
+    document.getElementById("connStatus").innerText = "Conectado ao MQTT";
     document.getElementById("connStatus").style.background = "rgba(0,150,0,0.7)";
     client.subscribe('casa/status');
   });
@@ -166,38 +221,7 @@ function connectMQTT() {
     if (topic !== 'casa/status') return;
     try {
       const data = JSON.parse(message.toString());
-      let on = 0, off = 0;
-      for(let i = 0; i < NUM_RELAYS; i++) {
-        if(data.hasOwnProperty("relay"+i)) {
-          const state = data["relay"+i];
-          const name = data["name"+i] || "Relé "+(i+1);
-          const iconIdx = data["icon"+i] ?? 0;
-          const enabled = data["schedEnabled"+i] ?? false;
-          const onH = data["onHour"+i] ?? 7;
-          const onM = data["onMin"+i] ?? 0;
-          const offH = data["offHour"+i] ?? 18;
-          const offM = data["offMin"+i] ?? 0;
-
-          schedData[i] = {enabled, onH, onM, offH, offM};
-          relayNamesLocal[i] = name;
-
-          const nameEl = document.getElementById("name"+(i+1));
-          const imgEl = document.getElementById("img"+(i+1));
-          const gearEl = document.getElementById("gear"+(i+1));
-          const statusEl = document.getElementById("status"+(i+1));
-
-          if (nameEl) nameEl.innerText = name;
-          if (imgEl) imgEl.src = iconFiles[iconIdx];
-          if (gearEl) gearEl.classList.toggle("active", enabled);
-          if (statusEl) {
-            statusEl.innerText = state ? "LIGADO" : "DESLIGADO";
-            statusEl.className = "status " + (state ? "on" : "off");
-          }
-          state ? on++ : off++;
-        }
-      }
-      document.getElementById("onCount").innerText = on;
-      document.getElementById("offCount").innerText = off;
+      updateStatus(data);
     } catch (err) {
       console.error("Erro ao processar mensagem MQTT:", err);
     }
@@ -209,9 +233,7 @@ function connectMQTT() {
     setTimeout(connectMQTT, 3000);
   });
 
-  client.on('error', (err) => {
-    console.error("Erro MQTT:", err);
-  });
+  client.on('error', (err) => console.error("Erro MQTT:", err));
 }
 
 function sendCommand(obj) {
@@ -275,7 +297,6 @@ function toggle(id,state){
   btn.onmouseup = btn.onmouseleave = btn.ontouchend = ()=>clearTimeout(pressTimer);
 });
 
-loadRelays();
 connectMQTT();
 </script>
 </body>
