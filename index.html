@@ -83,7 +83,6 @@
     <button class="general-btn" id="btnOffAll">Desligar Todos</button>
   </div>
 </div>
-
 <div id="scheduleModal" class="modal">
   <div class="modal-content">
     <div class="modal-header">
@@ -105,21 +104,16 @@
     <button class="save-btn" onclick="saveSchedule()">Salvar Configuração</button>
   </div>
 </div>
-
 <div class="connection-status" id="connStatus">Conectando ao MQTT...</div>
-
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <script>
 const iconFiles = ["icon0.svg","icon1.svg","icon2.svg","icon3.svg","icon4.svg","icon5.svg"];
-
 // <<< ALTERE AQUI SE MUDAR NO ESP32 >>>
 const NUM_RELAYS = 12;
-
 let currentRelay = 0;
 let client;
 const relayNamesLocal = new Array(NUM_RELAYS).fill("").map((_, i) => `Relé ${i+1}`);
 const schedData = new Array(NUM_RELAYS).fill({enabled: false, onH: 7, onM: 0, offH: 18, offM: 0});
-
 function loadRelays() {
   const c = document.getElementById("devices");
   c.innerHTML = "";
@@ -141,7 +135,6 @@ function loadRelays() {
       </div>
       <div class="icon-selector" id="sel${i}"></div>`;
     c.appendChild(card);
-
     const sel = document.getElementById("sel"+i);
     iconFiles.forEach((src, idx) => {
       const opt = document.createElement("div");
@@ -157,7 +150,6 @@ function loadRelays() {
     });
   }
 }
-
 function updateStatus(data) {
   let on = 0, off = 0;
   for(let i = 0; i < NUM_RELAYS; i++) {
@@ -170,15 +162,12 @@ function updateStatus(data) {
       const onM = data["onMin"+i] ?? 0;
       const offH = data["offHour"+i] ?? 18;
       const offM = data["offMin"+i] ?? 0;
-
       schedData[i] = {enabled, onH, onM, offH, offM};
       relayNamesLocal[i] = name;
-
       const nameEl = document.getElementById("name"+(i+1));
       const imgEl = document.getElementById("img"+(i+1));
       const gearEl = document.getElementById("gear"+(i+1));
       const statusEl = document.getElementById("status"+(i+1));
-
       if (nameEl) nameEl.innerText = name;
       if (imgEl) imgEl.src = iconFiles[iconIdx];
       if (gearEl) gearEl.classList.toggle("active", enabled);
@@ -192,20 +181,18 @@ function updateStatus(data) {
   document.getElementById("onCount").innerText = on;
   document.getElementById("offCount").innerText = off;
 }
-
 function connectMQTT() {
   const clientId = "web_client_" + Math.random().toString(16).substr(2, 8);
   // <<< BROKER NOVO E MAIS ESTÁVEL >>>
   client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {clientId});
-
   client.on('connect', () => {
     document.getElementById("connStatus").innerText = "Conectado ao MQTT";
     document.getElementById("connStatus").style.background = "rgba(0,150,0,0.7)";
-    client.subscribe('casa/status');
+    client.subscribe('casa_david/status');
+    sendCommand({type:"request_status"});
   });
-
   client.on('message', (topic, message) => {
-    if (topic !== 'casa/status') return;
+    if (topic !== 'casa_david/status') return;
     try {
       const data = JSON.parse(message.toString());
       updateStatus(data);
@@ -213,24 +200,19 @@ function connectMQTT() {
       console.error("Erro ao processar mensagem:", err);
     }
   });
-
   client.on('close', () => {
     document.getElementById("connStatus").innerText = "Desconectado - reconectando...";
     document.getElementById("connStatus").style.background = "rgba(200,0,0,0.7)";
     setTimeout(connectMQTT, 3000);
   });
-
   client.on('error', (err) => console.error("Erro MQTT:", err));
 }
-
 function sendCommand(obj) {
   if (client && client.connected) {
-    client.publish('casa/command', JSON.stringify(obj));
+    client.publish('casa_david/command', JSON.stringify(obj));
   }
 }
-
 /* Todas as funções restantes (openModal, saveSchedule, etc.) permanecem exatamente iguais */
-
 function openModal(id) {
   currentRelay = id - 1;
   document.getElementById("modalRelayName").innerText = relayNamesLocal[currentRelay];
@@ -240,9 +222,7 @@ function openModal(id) {
   document.getElementById("offTime").value = `${String(d.offH).padStart(2,'0')}:${String(d.offM).padStart(2,'0')}`;
   document.getElementById("scheduleModal").style.display = "flex";
 }
-
 function closeModal() { document.getElementById("scheduleModal").style.display = "none"; }
-
 function saveSchedule() {
   const enabled = document.getElementById("schedEnabled").checked;
   const onTime = document.getElementById("onTime").value || "07:00";
@@ -252,13 +232,11 @@ function saveSchedule() {
   sendCommand({type:"schedule",relay:currentRelay+1,enabled,onHour:onH,onMin:onM,offHour:offH,offMin:offM});
   closeModal();
 }
-
 function toggleSelector(id) {
   document.querySelectorAll('.icon-selector').forEach(s => s.style.display='none');
   const sel = document.getElementById("sel"+id);
   sel.style.display = (sel.style.display === 'flex') ? 'none' : 'flex';
 }
-
 function editName(el, id) {
   el.contentEditable = true; el.focus();
   document.execCommand('selectAll', false, null);
@@ -272,11 +250,9 @@ function editName(el, id) {
   el.onblur = save;
   el.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); save(); } };
 }
-
 function toggle(id, state) {
   sendCommand({type:"toggle",relay:id,state:state});
 }
-
 ["btnOnAll","btnOffAll"].forEach(b => {
   const btn = document.getElementById(b);
   const state = (b === "btnOnAll");
@@ -289,7 +265,6 @@ function toggle(id, state) {
   };
   btn.onmouseup = btn.onmouseleave = btn.ontouchend = () => clearTimeout(pressTimer);
 });
-
 loadRelays();
 connectMQTT();
 </script>
