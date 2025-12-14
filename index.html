@@ -199,10 +199,7 @@ function sendCommand(obj) {
 
 function connectMQTT() {
   const clientId = "web_" + Math.random().toString(16).substr(2, 8);
-  client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
-    clientId: clientId,
-    keepalive: 60
-  });
+  client = mqtt.connect('wss://broker.hivemq.com:8084/mqtt', {clientId: clientId, keepalive: 60});
 
   client.on('connect', () => {
     console.log("MQTT conectado com sucesso!");
