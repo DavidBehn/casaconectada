@@ -119,6 +119,7 @@ const relayData = [];
 function createRelays() {
   const container = document.getElementById("devices");
   container.innerHTML = "";
+  relayData.length = NUM_RELAYS; // Limpa dados antigos
   for (let i = 1; i <= NUM_RELAYS; i++) {
     const idx = i - 1;
     relayData[idx] = relayData[idx] || {state: false, name: `Relé ${i}`, icon: 0, schedEnabled: false, onH: 7, onM: 0, offH: 18, offM: 0};
@@ -141,7 +142,6 @@ function createRelays() {
       <div class="icon-selector" id="sel${i}"></div>`;
     container.appendChild(card);
 
-    // Seletor de ícones
     const sel = document.getElementById(`sel${i}`);
     iconFiles.forEach((src, iconIdx) => {
       const opt = document.createElement("div");
@@ -184,50 +184,53 @@ function updateSummary(on, off) {
   document.getElementById("offCount").innerText = off;
 }
 
+// Atualiza apenas estado (não toca no agendamento)
+function handleStates(array) {
+  let onCount = 0;
+  array.forEach((state, i) => {
+    if (relayData[i]) {
+      if (relayData[i].state !== state) {
+        relayData[i].state = state;
+        updateSingleCard(i + 1);
+      }
+      if (state) onCount++;
+    }
+  });
+  updateSummary(onCount, NUM_RELAYS - onCount);
+}
+
+// Atualiza dados individuais (nome, ícone, estado) - não sobrescreve agendamento
 function handleSingleRelay(relayNum, data) {
   const idx = relayNum - 1;
-  relayData[idx] = { ...relayData[idx], ...data };
-  updateSingleCard(relayNum);
+  if (relayData[idx]) {
+    // Atualiza apenas campos que não são de agendamento
+    if (data.state !== undefined) relayData[idx].state = data.state;
+    if (data.name) relayData[idx].name = data.name.substring(0, 28);
+    if (data.icon !== undefined) relayData[idx].icon = data.icon;
+    updateSingleCard(relayNum);
 
-  // Atualiza contadores se estado mudou
-  if (data.hasOwnProperty("state")) {
-    let onCount = 0;
-    for (let i = 0; i < NUM_RELAYS; i++) {
-      if (relayData[i] && relayData[i].state) onCount++;
+    if (data.state !== undefined) {
+      let onCount = 0;
+      for (let i = 0; i < NUM_RELAYS; i++) if (relayData[i]?.state) onCount++;
+      updateSummary(onCount, NUM_RELAYS - onCount);
     }
-    updateSummary(onCount, NUM_RELAYS - onCount);
   }
 }
 
-// Canal exclusivo de agendamento
+// Canal exclusivo - atualiza TODO o agendamento (fonte confiável)
 function handleFullSchedule(array) {
   array.forEach(item => {
     const idx = item.relay - 1;
-    if (idx >= 0 && idx < NUM_RELAYS) {
-      relayData[idx] = {
-        ...relayData[idx],
-        schedEnabled: item.schedEnabled,
-        onH: item.onHour,
-        onM: item.onMin,
-        offH: item.offHour,
-        offM: item.offMin
-      };
+    if (idx >= 0 && idx < NUM_RELAYS && relayData[idx]) {
+      relayData[idx].schedEnabled = item.schedEnabled;
+      relayData[idx].onH = item.onHour;
+      relayData[idx].onM = item.onMin;
+      relayData[idx].offH = item.offHour;
+      relayData[idx].offM = item.offMin;
       const gearEl = document.getElementById(`gear${item.relay}`);
       if (gearEl) gearEl.classList.toggle("active", item.schedEnabled);
     }
   });
-}
-
-function handleStates(array) {
-  let onCount = 0;
-  for (let i = 0; i < NUM_RELAYS; i++) {
-    if (relayData[i] && relayData[i].state !== array[i]) {
-      relayData[i].state = array[i];
-      updateSingleCard(i + 1);
-    }
-    if (array[i]) onCount++;
-  }
-  updateSummary(onCount, NUM_RELAYS - onCount);
 }
 
 function sendCommand(obj) {
@@ -247,7 +250,7 @@ function connectMQTT() {
 
     client.subscribe("Bentech/casa_conectada/David/#");
 
-    // Solicita status completo
+    // Força sincronização completa ao conectar
     sendCommand({ type: "request_status" });
   });
 
@@ -258,8 +261,7 @@ function connectMQTT() {
       if (topic.endsWith("/config")) {
         if (payload.num_relays && payload.num_relays !== NUM_RELAYS) {
           NUM_RELAYS = payload.num_relays;
-          relayData.length = NUM_RELAYS;
-          createRelays();
+          createRelays(); // Recria tudo limpo
         }
       } else if (topic.endsWith("/summary")) {
         updateSummary(payload.on || 0, payload.off || 0);
@@ -287,7 +289,7 @@ function connectMQTT() {
   });
 }
 
-// Pedido periódico de status completo
+// Pedido periódico garante sincronização mesmo se perder pacote
 setInterval(() => {
   if (client && client.connected) {
     sendCommand({ type: "request_status" });
@@ -351,7 +353,6 @@ function toggle(id, state) {
   sendCommand({ type: "toggle", relay: id, state });
 }
 
-// Ligar/Desligar Todos (pressão longa)
 ["btnOnAll", "btnOffAll"].forEach(b => {
   const btn = document.getElementById(b);
   const state = (b === "btnOnAll");
@@ -363,7 +364,7 @@ function toggle(id, state) {
 });
 
 // Inicialização
-createRelays(); // Cria vazio inicialmente
+createRelays();
 connectMQTT();
 </script>
 </body>
