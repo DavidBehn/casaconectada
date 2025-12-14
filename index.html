@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
@@ -6,103 +5,103 @@
 <title>Casa Conectada</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <style>
-  /* Todo o CSS permanece exatamente igual ao anterior */
-  *{margin:0;padding:0;box-sizing:border-box;font-family:Roboto,Arial,sans-serif;}
-  html{height:100%;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
-  body{height:100%;overflow-x:hidden;margin:0;background:#000;position:relative;}
-  .background{position:fixed;top:-50vh;left:0;right:0;bottom:-50vh;background:url('image.jpg') no-repeat center center;background-size:cover;z-index:-2;}
-  .background::after{content:"";position:absolute;inset:0;background:rgba(0,0,0,0.45);z-index:-1;}
-  .main-content{position:relative;z-index:1;min-height:100vh;padding:20px;display:flex;flex-direction:column;align-items:center;color:#fff;}
-  .top-header{display:flex;align-items:center;justify-content:center;gap:20px;width:100%;max-width:900px;flex-wrap:wrap;margin-bottom:20px;}
-  .logo{height:50px;width:auto;max-width:200px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.7));}
-  .title-block{display:flex;flex-direction:column;justify-content:center;text-align:center;}
-  h1{font-size:26px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.6);margin:0 0 8px 0;white-space:nowrap;}
-  .status-summary{font-size:16px;color:#ddd;text-shadow:0 1px 2px rgba(0,0,0,0.6);}
-  .on-count{color:#90ee90;font-weight:600;}
-  .off-count{color:#ff6b6b;font-weight:600;}
-  .devices-container{width:100%;max-width:900px;display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));}
-  .device-card{background:rgba(255,255,255,0.15);padding:18px;border-radius:22px;box-shadow:0 3px 10px rgba(0,0,0,0.3);text-align:center;transition:.25s;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);}
-  .device-card:hover{transform:translateY(-4px);box-shadow:0 6px 18px rgba(0,0,0,0.5);}
-  .icon-circle{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,0.25);margin:0 auto 14px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
-  .icon-circle img{width:32px;height:32px;}
-  .device-name{font-size:16px;font-weight:600;margin-bottom:6px;user-select:none;line-height:1.3;text-shadow:0 1px 2px rgba(0,0,0,0.6);}
-  .device-name[contenteditable=true]{background:rgba(59,108,255,0.3);border-bottom:2px solid #3b6cff;padding:2px 6px;border-radius:4px;outline:none;}
-  .status{font-size:13px;font-weight:600;margin-bottom:28px;text-shadow:0 1px 2px rgba(0,0,0,0.6);}
-  .status.on{color:#90ee90;}
-  .status.off{color:#ff6b6b;}
-  button{border:none;padding:9px 16px;border-radius:14px;cursor:pointer;font-size:14px;font-weight:600;transition:.2s;}
-  .btn-on{background:#3b6cff;color:white;margin-right:6px;}
-  .btn-on:hover{background:#2a52d8;}
-  .btn-off{background:rgba(255,255,255,0.2);color:#fff;}
-  .btn-off:hover{background:rgba(255,255,255,0.3);}
-  .general-buttons{margin-top:30px;display:flex;gap:18px;flex-wrap:wrap;justify-content:center;}
-  .general-btn{padding:14px 28px;border-radius:16px;background:#111;color:white;font-size:16px;font-weight:700;opacity:0.9;}
-  .general-btn:hover{background:#333;opacity:1;}
-  .gear-icon{position:absolute;top:10px;right:10px;width:28px;height:28px;cursor:pointer;opacity:0.6;transition:opacity .2s,transform .2s;}
-  .gear-icon.active{opacity:1;}
-  .gear-icon.active img{filter:brightness(0) invert(1);}
-  .gear-icon:hover{opacity:1;transform:rotate(30deg);}
-  .gear-icon img{width:100%;height:100%;}
-  .icon-selector{position:absolute;top:68px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.95);border-radius:16px;box-shadow:0 8px 25px rgba(0,0,0,0.4);padding:12px;display:none;flex-wrap:wrap;gap:10px;width:200px;z-index:100;justify-content:center;border:1px solid #ddd;}
-  .icon-option{width:44px;height:44px;border-radius:50%;background:#f8f9ff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.25s;border:2px solid transparent;}
-  .icon-option:hover{border:2px solid #3b6cff;background:#ebf0ff;}
-  .icon-option img{width:26px;height:26px;}
-  .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;z-index:1000;}
-  .modal-content{background:rgba(255,255,255,0.95);padding:24px;border-radius:16px;width:90%;max-width:360px;box-shadow:0 10px 30px rgba(0,0,0,0.5);color:#222;}
-  .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
-  .modal-header h2{font-size:20px;word-wrap:break-word;}
-  .close-btn{font-size:28px;cursor:pointer;opacity:0.6;}
-  .close-btn:hover{opacity:1;}
-  .form-group{margin-bottom:16px;}
-  label{display:block;margin-bottom:6px;font-weight:600;}
-  input[type="time"]{width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;}
-  .checkbox-group{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
-  .checkbox-group label{margin:0;font-weight:600;cursor:pointer;flex:1;}
-  .save-btn{background:#3b6cff;color:white;padding:10px 20px;border:none;border-radius:12px;cursor:pointer;font-size:15px;width:100%;}
-  .save-btn:hover{background:#2a52d8;}
-  .connection-status{position:fixed;bottom:10px;left:10px;background:rgba(0,0,0,0.6);color:#fff;padding:6px 12px;border-radius:8px;font-size:13px;}
-  @media (max-width:480px){h1{font-size:22px;margin-bottom:6px;}.logo{height:40px;}.top-header{gap:12px;}.title-block h1{white-space:normal;}}
+/* Todo o CSS permanece exatamente igual ao anterior */
+*{margin:0;padding:0;box-sizing:border-box;font-family:Roboto,Arial,sans-serif;}
+html{height:100%;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+body{height:100%;overflow-x:hidden;margin:0;background:#000;position:relative;}
+.background{position:fixed;top:-50vh;left:0;right:0;bottom:-50vh;background:url('image.jpg') no-repeat center center;background-size:cover;z-index:-2;}
+.background::after{content:"";position:absolute;inset:0;background:rgba(0,0,0,0.45);z-index:-1;}
+.main-content{position:relative;z-index:1;min-height:100vh;padding:20px;display:flex;flex-direction:column;align-items:center;color:#fff;}
+.top-header{display:flex;align-items:center;justify-content:center;gap:20px;width:100%;max-width:900px;flex-wrap:wrap;margin-bottom:20px;}
+.logo{height:50px;width:auto;max-width:200px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.7));}
+.title-block{display:flex;flex-direction:column;justify-content:center;text-align:center;}
+h1{font-size:26px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.6);margin:0 0 8px 0;white-space:nowrap;}
+.status-summary{font-size:16px;color:#ddd;text-shadow:0 1px 2px rgba(0,0,0,0.6);}
+.on-count{color:#90ee90;font-weight:600;}
+.off-count{color:#ff6b6b;font-weight:600;}
+.devices-container{width:100%;max-width:900px;display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));}
+.device-card{background:rgba(255,255,255,0.15);padding:18px;border-radius:22px;box-shadow:0 3px 10px rgba(0,0,0,0.3);text-align:center;transition:.25s;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);}
+.device-card:hover{transform:translateY(-4px);box-shadow:0 6px 18px rgba(0,0,0,0.5);}
+.icon-circle{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,0.25);margin:0 auto 14px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.icon-circle img{width:32px;height:32px;}
+.device-name{font-size:16px;font-weight:600;margin-bottom:6px;user-select:none;line-height:1.3;text-shadow:0 1px 2px rgba(0,0,0,0.6);}
+.device-name[contenteditable=true]{background:rgba(59,108,255,0.3);border-bottom:2px solid #3b6cff;padding:2px 6px;border-radius:4px;outline:none;}
+.status{font-size:13px;font-weight:600;margin-bottom:28px;text-shadow:0 1px 2px rgba(0,0,0,0.6);}
+.status.on{color:#90ee90;}
+.status.off{color:#ff6b6b;}
+button{border:none;padding:9px 16px;border-radius:14px;cursor:pointer;font-size:14px;font-weight:600;transition:.2s;}
+.btn-on{background:#3b6cff;color:white;margin-right:6px;}
+.btn-on:hover{background:#2a52d8;}
+.btn-off{background:rgba(255,255,255,0.2);color:#fff;}
+.btn-off:hover{background:rgba(255,255,255,0.3);}
+.general-buttons{margin-top:30px;display:flex;gap:18px;flex-wrap:wrap;justify-content:center;}
+.general-btn{padding:14px 28px;border-radius:16px;background:#111;color:white;font-size:16px;font-weight:700;opacity:0.9;}
+.general-btn:hover{background:#333;opacity:1;}
+.gear-icon{position:absolute;top:10px;right:10px;width:28px;height:28px;cursor:pointer;opacity:0.6;transition:opacity .2s,transform .2s;}
+.gear-icon.active{opacity:1;}
+.gear-icon.active img{filter:brightness(0) invert(1);}
+.gear-icon:hover{opacity:1;transform:rotate(30deg);}
+.gear-icon img{width:100%;height:100%;}
+.icon-selector{position:absolute;top:68px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.95);border-radius:16px;box-shadow:0 8px 25px rgba(0,0,0,0.4);padding:12px;display:none;flex-wrap:wrap;gap:10px;width:200px;z-index:100;justify-content:center;border:1px solid #ddd;}
+.icon-option{width:44px;height:44px;border-radius:50%;background:#f8f9ff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.25s;border:2px solid transparent;}
+.icon-option:hover{border:2px solid #3b6cff;background:#ebf0ff;}
+.icon-option img{width:26px;height:26px;}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;z-index:1000;}
+.modal-content{background:rgba(255,255,255,0.95);padding:24px;border-radius:16px;width:90%;max-width:360px;box-shadow:0 10px 30px rgba(0,0,0,0.5);color:#222;}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.modal-header h2{font-size:20px;word-wrap:break-word;}
+.close-btn{font-size:28px;cursor:pointer;opacity:0.6;}
+.close-btn:hover{opacity:1;}
+.form-group{margin-bottom:16px;}
+label{display:block;margin-bottom:6px;font-weight:600;}
+input[type="time"]{width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;}
+.checkbox-group{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+.checkbox-group label{margin:0;font-weight:600;cursor:pointer;flex:1;}
+.save-btn{background:#3b6cff;color:white;padding:10px 20px;border:none;border-radius:12px;cursor:pointer;font-size:15px;width:100%;}
+.save-btn:hover{background:#2a52d8;}
+.connection-status{position:fixed;bottom:10px;left:10px;background:rgba(0,0,0,0.6);color:#fff;padding:6px 12px;border-radius:8px;font-size:13px;}
+@media (max-width:480px){h1{font-size:22px;margin-bottom:6px;}.logo{height:40px;}.top-header{gap:12px;}.title-block h1{white-space:normal;}}
 </style>
 </head>
 <body>
 <!-- Todo o HTML permanece igual -->
 <div class="background"></div>
 <div class="main-content">
-  <div class="top-header">
-    <img class="logo" src="logo.png" alt="Logo">
-    <div class="title-block">
-      <h1>Casa Conectada</h1>
-      <div class="status-summary">
-        Ligados: <span class="on-count" id="onCount">0</span> • Desligados: <span class="off-count" id="offCount">carregando...</span>
-      </div>
-    </div>
-  </div>
-  <div class="devices-container" id="devices"></div>
-  <div class="general-buttons">
-    <button class="general-btn" id="btnOnAll">Ligar Todos</button>
-    <button class="general-btn" id="btnOffAll">Desligar Todos</button>
-  </div>
+<div class="top-header">
+<img class="logo" src="logo.png" alt="Logo">
+<div class="title-block">
+<h1>Casa Conectada</h1>
+<div class="status-summary">
+Ligados: <span class="on-count" id="onCount">0</span> • Desligados: <span class="off-count" id="offCount">carregando...</span>
+</div>
+</div>
+</div>
+<div class="devices-container" id="devices"></div>
+<div class="general-buttons">
+<button class="general-btn" id="btnOnAll">Ligar Todos</button>
+<button class="general-btn" id="btnOffAll">Desligar Todos</button>
+</div>
 </div>
 <div id="scheduleModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Programação Automática - <span id="modalRelayName">Relé</span></h2>
-      <span class="close-btn" onclick="closeModal()">×</span>
-    </div>
-    <div class="checkbox-group">
-      <input type="checkbox" id="schedEnabled">
-      <label for="schedEnabled">Ativar agendamento automático</label>
-    </div>
-    <div class="form-group">
-      <label for="onTime">Horário para LIGAR</label>
-      <input type="time" id="onTime">
-    </div>
-    <div class="form-group">
-      <label for="offTime">Horário para DESLIGAR</label>
-      <input type="time" id="offTime">
-    </div>
-    <button class="save-btn" onclick="saveSchedule()">Salvar Configuração</button>
-  </div>
+<div class="modal-content">
+<div class="modal-header">
+<h2>Programação Automática - <span id="modalRelayName">Relé</span></h2>
+<span class="close-btn" onclick="closeModal()">×</span>
+</div>
+<div class="checkbox-group">
+<input type="checkbox" id="schedEnabled">
+<label for="schedEnabled">Ativar agendamento automático</label>
+</div>
+<div class="form-group">
+<label for="onTime">Horário para LIGAR</label>
+<input type="time" id="onTime">
+</div>
+<div class="form-group">
+<label for="offTime">Horário para DESLIGAR</label>
+<input type="time" id="offTime">
+</div>
+<button class="save-btn" onclick="saveSchedule()">Salvar Configuração</button>
+</div>
 </div>
 <div class="connection-status" id="connStatus">Conectando ao MQTT...</div>
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
@@ -115,155 +114,155 @@ let client;
 const relayNamesLocal = new Array(NUM_RELAYS).fill("").map((_, i) => `Relé ${i+1}`);
 const schedData = new Array(NUM_RELAYS).fill({enabled: false, onH: 7, onM: 0, offH: 18, offM: 0});
 function loadRelays() {
-  const c = document.getElementById("devices");
-  c.innerHTML = "";
-  for(let i = 1; i <= NUM_RELAYS; i++) {
-    const card = document.createElement("div");
-    card.className = "device-card";
-    card.innerHTML = `
-      <div class="gear-icon" id="gear${i}" onclick="openModal(${i})">
-        <img src="gear.svg" alt="Config">
-      </div>
-      <div class="icon-circle" ondblclick="toggleSelector(${i})">
-        <img id="img${i}" src="icon0.svg">
-      </div>
-      <div class="device-name" id="name${i}" ondblclick="editName(this,${i})">Relé ${i}</div>
-      <div class="status off" id="status${i}">DESLIGADO</div>
-      <div>
-        <button class="btn-on" onclick="toggle(${i},true)">ON</button>
-        <button class="btn-off" onclick="toggle(${i},false)">OFF</button>
-      </div>
-      <div class="icon-selector" id="sel${i}"></div>`;
-    c.appendChild(card);
-    const sel = document.getElementById("sel"+i);
-    iconFiles.forEach((src, idx) => {
-      const opt = document.createElement("div");
-      opt.className = "icon-option";
-      opt.innerHTML = `<img src="${src}">`;
-      opt.onclick = e => {
-        e.stopPropagation();
-        document.getElementById("img"+i).src = src;
-        sendCommand({type:"icon",relay:i,icon:idx});
-        sel.style.display = "none";
-      };
-      sel.appendChild(opt);
-    });
-  }
+const c = document.getElementById("devices");
+c.innerHTML = "";
+for(let i = 1; i <= NUM_RELAYS; i++) {
+const card = document.createElement("div");
+card.className = "device-card";
+card.innerHTML = `
+<div class="gear-icon" id="gear$$ {i}" onclick="openModal( $${i})">
+<img src="gear.svg" alt="Config">
+</div>
+<div class="icon-circle" ondblclick="toggleSelector(${i})">
+<img id="img${i}" src="icon0.svg">
+</div>
+<div class="device-name" id="name$$ {i}" ondblclick="editName(this, $${i})">Relé ${i}</div>
+<div class="status off" id="status${i}">DESLIGADO</div>
+<div>
+<button class="btn-on" onclick="toggle(${i},true)">ON</button>
+<button class="btn-off" onclick="toggle(${i},false)">OFF</button>
+</div>
+<div class="icon-selector" id="sel${i}"></div>`;
+c.appendChild(card);
+const sel = document.getElementById("sel"+i);
+iconFiles.forEach((src, idx) => {
+const opt = document.createElement("div");
+opt.className = "icon-option";
+opt.innerHTML = `<img src="${src}">`;
+opt.onclick = e => {
+e.stopPropagation();
+document.getElementById("img"+i).src = src;
+sendCommand({type:"icon",relay:i,icon:idx});
+sel.style.display = "none";
+};
+sel.appendChild(opt);
+});
+}
 }
 function updateStatus(data) {
-  let on = 0, off = 0;
-  for(let i = 0; i < NUM_RELAYS; i++) {
-    if(data.hasOwnProperty("relay"+i)) {
-      const state = data["relay"+i];
-      const name = data["name"+i] || `Relé ${i+1}`;
-      const iconIdx = data["icon"+i] ?? 0;
-      const enabled = data["schedEnabled"+i] ?? false;
-      const onH = data["onHour"+i] ?? 7;
-      const onM = data["onMin"+i] ?? 0;
-      const offH = data["offHour"+i] ?? 18;
-      const offM = data["offMin"+i] ?? 0;
-      schedData[i] = {enabled, onH, onM, offH, offM};
-      relayNamesLocal[i] = name;
-      const nameEl = document.getElementById("name"+(i+1));
-      const imgEl = document.getElementById("img"+(i+1));
-      const gearEl = document.getElementById("gear"+(i+1));
-      const statusEl = document.getElementById("status"+(i+1));
-      if (nameEl) nameEl.innerText = name;
-      if (imgEl) imgEl.src = iconFiles[iconIdx];
-      if (gearEl) gearEl.classList.toggle("active", enabled);
-      if (statusEl) {
-        statusEl.innerText = state ? "LIGADO" : "DESLIGADO";
-        statusEl.className = "status " + (state ? "on" : "off");
-      }
-      state ? on++ : off++;
-    }
-  }
-  document.getElementById("onCount").innerText = on;
-  document.getElementById("offCount").innerText = off;
+let on = 0, off = 0;
+for(let i = 0; i < NUM_RELAYS; i++) {
+if(data.hasOwnProperty("relay"+i)) {
+const state = data["relay"+i];
+const name = data["name"+i] || `Relé ${i+1}`;
+const iconIdx = data["icon"+i] ?? 0;
+const enabled = data["schedEnabled"+i] ?? false;
+const onH = data["onHour"+i] ?? 7;
+const onM = data["onMin"+i] ?? 0;
+const offH = data["offHour"+i] ?? 18;
+const offM = data["offMin"+i] ?? 0;
+schedData[i] = {enabled, onH, onM, offH, offM};
+relayNamesLocal[i] = name;
+const nameEl = document.getElementById("name"+(i+1));
+const imgEl = document.getElementById("img"+(i+1));
+const gearEl = document.getElementById("gear"+(i+1));
+const statusEl = document.getElementById("status"+(i+1));
+if (nameEl) nameEl.innerText = name;
+if (imgEl) imgEl.src = iconFiles[iconIdx];
+if (gearEl) gearEl.classList.toggle("active", enabled);
+if (statusEl) {
+statusEl.innerText = state ? "LIGADO" : "DESLIGADO";
+statusEl.className = "status " + (state ? "on" : "off");
+}
+state ? on++ : off++;
+}
+}
+document.getElementById("onCount").innerText = on;
+document.getElementById("offCount").innerText = off;
 }
 function connectMQTT() {
-  const clientId = "web_client_" + Math.random().toString(16).substr(2, 8);
-  // <<< BROKER NOVO E MAIS ESTÁVEL >>>
-  client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {clientId});
-  client.on('connect', () => {
-    document.getElementById("connStatus").innerText = "Conectado ao MQTT";
-    document.getElementById("connStatus").style.background = "rgba(0,150,0,0.7)";
-    client.subscribe('casa_david/status');
-    sendCommand({type:"request_status"});
-  });
-  client.on('message', (topic, message) => {
-    if (topic !== 'casa_david/status') return;
-    try {
-      const data = JSON.parse(message.toString());
-      updateStatus(data);
-    } catch (err) {
-      console.error("Erro ao processar mensagem:", err);
-    }
-  });
-  client.on('close', () => {
-    document.getElementById("connStatus").innerText = "Desconectado - reconectando...";
-    document.getElementById("connStatus").style.background = "rgba(200,0,0,0.7)";
-    setTimeout(connectMQTT, 3000);
-  });
-  client.on('error', (err) => console.error("Erro MQTT:", err));
+const clientId = "web_client_" + Math.random().toString(16).substr(2, 8);
+// <<< BROKER NOVO E MAIS ESTÁVEL >>>
+client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {clientId});
+client.on('connect', () => {
+document.getElementById("connStatus").innerText = "Conectado ao MQTT";
+document.getElementById("connStatus").style.background = "rgba(0,150,0,0.7)";
+client.subscribe('Bentech/casa_conectada/David/status');
+sendCommand({type:"request_status"});
+});
+client.on('message', (topic, message) => {
+if (topic !== 'Bentech/casa_conectada/David/status') return;
+try {
+const data = JSON.parse(message.toString());
+updateStatus(data);
+} catch (err) {
+console.error("Erro ao processar mensagem:", err);
+}
+});
+client.on('close', () => {
+document.getElementById("connStatus").innerText = "Desconectado - reconectando...";
+document.getElementById("connStatus").style.background = "rgba(200,0,0,0.7)";
+setTimeout(connectMQTT, 3000);
+});
+client.on('error', (err) => console.error("Erro MQTT:", err));
 }
 function sendCommand(obj) {
-  if (client && client.connected) {
-    client.publish('casa_david/command', JSON.stringify(obj));
-  }
+if (client && client.connected) {
+client.publish('Bentech/casa_conectada/David/command', JSON.stringify(obj));
+}
 }
 /* Todas as funções restantes (openModal, saveSchedule, etc.) permanecem exatamente iguais */
 function openModal(id) {
-  currentRelay = id - 1;
-  document.getElementById("modalRelayName").innerText = relayNamesLocal[currentRelay];
-  const d = schedData[currentRelay];
-  document.getElementById("schedEnabled").checked = d.enabled;
-  document.getElementById("onTime").value = `${String(d.onH).padStart(2,'0')}:${String(d.onM).padStart(2,'0')}`;
-  document.getElementById("offTime").value = `${String(d.offH).padStart(2,'0')}:${String(d.offM).padStart(2,'0')}`;
-  document.getElementById("scheduleModal").style.display = "flex";
+currentRelay = id - 1;
+document.getElementById("modalRelayName").innerText = relayNamesLocal[currentRelay];
+const d = schedData[currentRelay];
+document.getElementById("schedEnabled").checked = d.enabled;
+document.getElementById("onTime").value = `${String(d.onH).padStart(2,'0')}:${String(d.onM).padStart(2,'0')}`;
+document.getElementById("offTime").value = `${String(d.offH).padStart(2,'0')}:${String(d.offM).padStart(2,'0')}`;
+document.getElementById("scheduleModal").style.display = "flex";
 }
 function closeModal() { document.getElementById("scheduleModal").style.display = "none"; }
 function saveSchedule() {
-  const enabled = document.getElementById("schedEnabled").checked;
-  const onTime = document.getElementById("onTime").value || "07:00";
-  const offTime = document.getElementById("offTime").value || "18:00";
-  const [onH, onM] = onTime.split(':').map(Number);
-  const [offH, offM] = offTime.split(':').map(Number);
-  sendCommand({type:"schedule",relay:currentRelay+1,enabled,onHour:onH,onMin:onM,offHour:offH,offMin:offM});
-  closeModal();
+const enabled = document.getElementById("schedEnabled").checked;
+const onTime = document.getElementById("onTime").value || "07:00";
+const offTime = document.getElementById("offTime").value || "18:00";
+const [onH, onM] = onTime.split(':').map(Number);
+const [offH, offM] = offTime.split(':').map(Number);
+sendCommand({type:"schedule",relay:currentRelay+1,enabled,onHour:onH,onMin:onM,offHour:offH,offMin:offM});
+closeModal();
 }
 function toggleSelector(id) {
-  document.querySelectorAll('.icon-selector').forEach(s => s.style.display='none');
-  const sel = document.getElementById("sel"+id);
-  sel.style.display = (sel.style.display === 'flex') ? 'none' : 'flex';
+document.querySelectorAll('.icon-selector').forEach(s => s.style.display='none');
+const sel = document.getElementById("sel"+id);
+sel.style.display = (sel.style.display === 'flex') ? 'none' : 'flex';
 }
 function editName(el, id) {
-  el.contentEditable = true; el.focus();
-  document.execCommand('selectAll', false, null);
-  const save = () => {
-    let n = el.innerText.trim() || `Relé ${id}`;
-    if (n.length > 28) n = n.substring(0, 28);
-    el.innerText = n;
-    el.contentEditable = false;
-    sendCommand({type:"name",relay:id,name:n});
-  };
-  el.onblur = save;
-  el.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); save(); } };
+el.contentEditable = true; el.focus();
+document.execCommand('selectAll', false, null);
+const save = () => {
+let n = el.innerText.trim() || `Relé ${id}`;
+if (n.length > 28) n = n.substring(0, 28);
+el.innerText = n;
+el.contentEditable = false;
+sendCommand({type:"name",relay:id,name:n});
+};
+el.onblur = save;
+el.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); save(); } };
 }
 function toggle(id, state) {
-  sendCommand({type:"toggle",relay:id,state:state});
+sendCommand({type:"toggle",relay:id,state:state});
 }
 ["btnOnAll","btnOffAll"].forEach(b => {
-  const btn = document.getElementById(b);
-  const state = (b === "btnOnAll");
-  let pressTimer;
-  btn.onmousedown = btn.ontouchstart = e => {
-    e.preventDefault();
-    pressTimer = setTimeout(() => {
-      sendCommand({type:"all",state:state});
-    }, 900);
-  };
-  btn.onmouseup = btn.onmouseleave = btn.ontouchend = () => clearTimeout(pressTimer);
+const btn = document.getElementById(b);
+const state = (b === "btnOnAll");
+let pressTimer;
+btn.onmousedown = btn.ontouchstart = e => {
+e.preventDefault();
+pressTimer = setTimeout(() => {
+sendCommand({type:"all",state:state});
+}, 900);
+};
+btn.onmouseup = btn.onmouseleave = btn.ontouchend = () => clearTimeout(pressTimer);
 });
 loadRelays();
 connectMQTT();
