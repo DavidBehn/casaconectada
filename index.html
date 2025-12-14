@@ -120,13 +120,13 @@ for(let i = 1; i <= NUM_RELAYS; i++) {
 const card = document.createElement("div");
 card.className = "device-card";
 card.innerHTML = `
-<div class="gear-icon" id="gear$$ {i}" onclick="openModal( $${i})">
+<div class="gear-icon" id="gear${i}" onclick="openModal(${i})">
 <img src="gear.svg" alt="Config">
 </div>
 <div class="icon-circle" ondblclick="toggleSelector(${i})">
 <img id="img${i}" src="icon0.svg">
 </div>
-<div class="device-name" id="name$$ {i}" ondblclick="editName(this, $${i})">Relé ${i}</div>
+<div class="device-name" id="name${i}" ondblclick="editName(this, ${i})">Relé ${i}</div>
 <div class="status off" id="status${i}">DESLIGADO</div>
 <div>
 <button class="btn-on" onclick="toggle(${i},true)">ON</button>
@@ -134,20 +134,22 @@ card.innerHTML = `
 </div>
 <div class="icon-selector" id="sel${i}"></div>`;
 c.appendChild(card);
-const sel = document.getElementById("sel"+i);
+const sel = document.getElementById(`sel${i}`);
 iconFiles.forEach((src, idx) => {
 const opt = document.createElement("div");
 opt.className = "icon-option";
 opt.innerHTML = `<img src="${src}">`;
 opt.onclick = e => {
 e.stopPropagation();
-document.getElementById("img"+i).src = src;
+document.getElementById(`img${i}`).src = src;
 sendCommand({type:"icon",relay:i,icon:idx});
 sel.style.display = "none";
 };
 sel.appendChild(opt);
 });
 }
+document.getElementById("onCount").innerText = 0;
+document.getElementById("offCount").innerText = NUM_RELAYS;
 }
 function updateStatus(data) {
 let on = 0, off = 0;
@@ -163,10 +165,10 @@ const offH = data["offHour"+i] ?? 18;
 const offM = data["offMin"+i] ?? 0;
 schedData[i] = {enabled, onH, onM, offH, offM};
 relayNamesLocal[i] = name;
-const nameEl = document.getElementById("name"+(i+1));
-const imgEl = document.getElementById("img"+(i+1));
-const gearEl = document.getElementById("gear"+(i+1));
-const statusEl = document.getElementById("status"+(i+1));
+const nameEl = document.getElementById(`name${i+1}`);
+const imgEl = document.getElementById(`img${i+1}`);
+const gearEl = document.getElementById(`gear${i+1}`);
+const statusEl = document.getElementById(`status${i+1}`);
 if (nameEl) nameEl.innerText = name;
 if (imgEl) imgEl.src = iconFiles[iconIdx];
 if (gearEl) gearEl.classList.toggle("active", enabled);
@@ -214,7 +216,7 @@ client.publish('Bentech/casa_conectada/David/command', JSON.stringify(obj));
 /* Todas as funções restantes (openModal, saveSchedule, etc.) permanecem exatamente iguais */
 function openModal(id) {
 currentRelay = id - 1;
-document.getElementById("modalRelayName").innerText = relayNamesLocal[currentRelay];
+document.getElementById("modalRelayName").innerText = relayNamesLocal[currentRelay] || "Relé";
 const d = schedData[currentRelay];
 document.getElementById("schedEnabled").checked = d.enabled;
 document.getElementById("onTime").value = `${String(d.onH).padStart(2,'0')}:${String(d.onM).padStart(2,'0')}`;
@@ -233,7 +235,7 @@ closeModal();
 }
 function toggleSelector(id) {
 document.querySelectorAll('.icon-selector').forEach(s => s.style.display='none');
-const sel = document.getElementById("sel"+id);
+const sel = document.getElementById(`sel${id}`);
 sel.style.display = (sel.style.display === 'flex') ? 'none' : 'flex';
 }
 function editName(el, id) {
