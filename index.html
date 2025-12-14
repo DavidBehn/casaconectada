@@ -114,11 +114,10 @@ let currentRelay = 0;
 let client;
 const relayData = [];
 
-// Limpa e recria cards
 function createRelays() {
   const container = document.getElementById("devices");
   container.innerHTML = "";
-  relayData.length = 0; // <<< LIMPA TODOS OS DADOS, INCLUINDO AGENDAMENTO
+  relayData.length = 0;
   for (let i = 1; i <= NUM_RELAYS; i++) {
     const idx = i - 1;
     relayData[idx] = {state: false, name: `Relé ${i}`, icon: 0, schedEnabled: false, onH: 7, onM: 0, offH: 18, offM: 0};
@@ -132,7 +131,7 @@ function createRelays() {
       <div class="icon-circle" ondblclick="toggleSelector(${i})">
         <img id="img${i}" src="${iconFiles[0]}">
       </div>
-      <div class="device-name" id="name${i}" ondblclick="editName(this,${i})">Relé ${i}</div>
+      <div class="device-name" id="name${i}" ondblclick="editName(this,${i})">${relayData[idx].name}</div>
       <div class="status off" id="status${i}">DESLIGADO</div>
       <div>
         <button class="btn-on" onclick="toggle(${i},true)">ON</button>
@@ -193,28 +192,40 @@ function handleStates(array) {
   updateSummary(onCount, NUM_RELAYS - onCount);
 }
 
+// Atualiza qualquer dado individual (estado, nome, ícone, agendamento)
 function handleSingleRelay(relayNum, data) {
   const idx = relayNum - 1;
   if (relayData[idx]) {
     if (data.state !== undefined) relayData[idx].state = data.state;
     if (data.name) relayData[idx].name = data.name.substring(0, 28);
     if (data.icon !== undefined) relayData[idx].icon = data.icon;
+    if (data.schedEnabled !== undefined) relayData[idx].schedEnabled = data.schedEnabled;
+    if (data.onHour !== undefined) relayData[idx].onH = data.onHour;
+    if (data.onMin !== undefined) relayData[idx].onM = data.onMin;
+    if (data.offHour !== undefined) relayData[idx].offH = data.offHour;
+    if (data.offMin !== undefined) relayData[idx].offM = data.offMin;
     updateSingleCard(relayNum);
+
+    if (data.state !== undefined) {
+      let onCount = 0;
+      for (let i = 0; i < NUM_RELAYS; i++) if (relayData[i]?.state) onCount++;
+      updateSummary(onCount, NUM_RELAYS - onCount);
+    }
   }
 }
 
-// Fonte principal do agendamento
+// Fallback completo para agendamento (garante sincronização total)
 function handleFullSchedule(array) {
   array.forEach(item => {
     const idx = item.relay - 1;
     if (idx >= 0 && idx < NUM_RELAYS && relayData[idx]) {
-      relayData[idx].schedEnabled = !!item.schedEnabled;
-      relayData[idx].onH = item.onHour || 7;
-      relayData[idx].onM = item.onMin || 0;
-      relayData[idx].offH = item.offHour || 18;
-      relayData[idx].offM = item.offMin || 0;
+      relayData[idx].schedEnabled = item.schedEnabled;
+      relayData[idx].onH = item.onHour;
+      relayData[idx].onM = item.onMin;
+      relayData[idx].offH = item.offHour;
+      relayData[idx].offM = item.offMin;
       const gearEl = document.getElementById(`gear${item.relay}`);
-      if (gearEl) gearEl.classList.toggle("active", relayData[idx].schedEnabled);
+      if (gearEl) gearEl.classList.toggle("active", item.schedEnabled);
     }
   });
 }
@@ -243,7 +254,7 @@ function connectMQTT() {
       if (topic.endsWith("/config")) {
         if (payload.num_relays && payload.num_relays !== NUM_RELAYS) {
           NUM_RELAYS = payload.num_relays;
-          createRelays(); // <<< LIMPA TUDO, INCLUINDO AGENDAMENTO ANTIGO
+          createRelays();
         }
       } else if (topic.endsWith("/summary")) {
         updateSummary(payload.on || 0, payload.off || 0);
@@ -271,29 +282,11 @@ function connectMQTT() {
   });
 }
 
-// Fallback: se não receber schedule em 5s, força request
-let receivedSchedule = false;
-setTimeout(() => {
-  if (client && client.connected && !receivedSchedule) {
-    sendCommand({ type: "request_status" });
-  }
-}, 5000);
-
-// Marca que recebeu schedule
-const originalHandleFullSchedule = handleFullSchedule;
-handleFullSchedule = (array) => {
-  receivedSchedule = true;
-  originalHandleFullSchedule(array);
-};
-
-// Pedido periódico
 setInterval(() => {
   if (client && client.connected) {
     sendCommand({ type: "request_status" });
   }
 }, 15000);
-
-// ... (funções openModal, saveSchedule, toggle, etc. permanecem iguais ao anterior)
 
 function openModal(id) {
   currentRelay = id - 1;
