@@ -20,7 +20,7 @@
   .on-count{color:#90ee90;font-weight:600;}
   .off-count{color:#ff6b6b;font-weight:600;}
   .devices-container{width:100%;max-width:900px;display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));}
-  .device-card{background:rgba(255,255,255,0.15);padding:18px;border-radius:22px;box-shadow:0 3px 10px rgba(0,0,0,0.3);text-align:center;transition:.25s;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);}
+  .device-card{background:rgba(255,255,255,0.15);padding:18px;border-radius:22px;box-shadow:0 3px 10px rgba(0,0,0,0.3);text-align:center;transition:.25s;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);position:relative;}
   .device-card:hover{transform:translateY(-4px);box-shadow:0 6px 18px rgba(0,0,0,0.5);}
   .icon-circle{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,0.25);margin:0 auto 14px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
   .icon-circle img{width:32px;height:32px;}
@@ -37,11 +37,11 @@
   .general-buttons{margin-top:30px;display:flex;gap:18px;flex-wrap:wrap;justify-content:center;}
   .general-btn{padding:14px 28px;border-radius:16px;background:#111;color:white;font-size:16px;font-weight:700;opacity:0.9;}
   .general-btn:hover{background:#333;opacity:1;}
-  .gear-icon{position:absolute;top:10px;right:10px;width:28px;height:28px;cursor:pointer;opacity:0.6;transition:opacity .2s,transform .2s;}
+  .gear-icon{position:absolute;top:8px;right:8px;width:32px;height:32px;cursor:pointer;opacity:0.6;transition:opacity .2s,transform .2s;z-index:10;}
   .gear-icon.active{opacity:1;}
   .gear-icon.active img{filter:brightness(0) invert(1);}
   .gear-icon:hover{opacity:1;transform:rotate(30deg);}
-  .gear-icon img{width:100%;height:100%;}
+  .gear-icon img{width:100%;height:100%;object-fit:contain;}
   .icon-selector{position:absolute;top:68px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.95);border-radius:16px;box-shadow:0 8px 25px rgba(0,0,0,0.4);padding:12px;display:none;flex-wrap:wrap;gap:10px;width:200px;z-index:100;justify-content:center;border:1px solid #ddd;}
   .icon-option{width:44px;height:44px;border-radius:50%;background:#f8f9ff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.25s;border:2px solid transparent;}
   .icon-option:hover{border:2px solid #3b6cff;background:#ebf0ff;}
@@ -199,6 +199,25 @@ function handleSingleRelay(relayNum, data) {
   }
 }
 
+// Canal exclusivo de agendamento
+function handleFullSchedule(array) {
+  array.forEach(item => {
+    const idx = item.relay - 1;
+    if (idx >= 0 && idx < NUM_RELAYS) {
+      relayData[idx] = {
+        ...relayData[idx],
+        schedEnabled: item.schedEnabled,
+        onH: item.onHour,
+        onM: item.onMin,
+        offH: item.offHour,
+        offM: item.offMin
+      };
+      const gearEl = document.getElementById(`gear${item.relay}`);
+      if (gearEl) gearEl.classList.toggle("active", item.schedEnabled);
+    }
+  });
+}
+
 function handleStates(array) {
   let onCount = 0;
   for (let i = 0; i < NUM_RELAYS; i++) {
@@ -249,6 +268,8 @@ function connectMQTT() {
       } else if (topic.match(/\/relay\/\d+$/)) {
         const relayNum = parseInt(topic.split("/").pop());
         handleSingleRelay(relayNum, payload);
+      } else if (topic.endsWith("/schedule")) {
+        handleFullSchedule(payload);
       }
     } catch (e) {
       console.error("Erro MQTT:", e);
