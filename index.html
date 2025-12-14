@@ -196,6 +196,8 @@ client.on('message', (topic, message) => {
 if (topic !== 'Bentech/casa_conectada/David/publisher') return;
 try {
 const data = JSON.parse(message.toString());
+
+console.log("MQTT RECEBIDO:", data); // 👈 ADICIONE ESTA LINHA
 updateStatus(data);
 } catch (err) {
 console.error("Erro ao processar mensagem:", err);
