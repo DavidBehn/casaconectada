@@ -112,17 +112,16 @@ const iconFiles = ["icon0.svg","icon1.svg","icon2.svg","icon3.svg","icon4.svg","
 let NUM_RELAYS = 0;
 let currentRelay = 0;
 let client;
-
-// Armazena todos os dados de cada relé
 const relayData = [];
 
+// Limpa e recria cards
 function createRelays() {
   const container = document.getElementById("devices");
   container.innerHTML = "";
-  relayData.length = NUM_RELAYS; // Limpa dados antigos
+  relayData.length = 0; // <<< LIMPA TODOS OS DADOS, INCLUINDO AGENDAMENTO
   for (let i = 1; i <= NUM_RELAYS; i++) {
     const idx = i - 1;
-    relayData[idx] = relayData[idx] || {state: false, name: `Relé ${i}`, icon: 0, schedEnabled: false, onH: 7, onM: 0, offH: 18, offM: 0};
+    relayData[idx] = {state: false, name: `Relé ${i}`, icon: 0, schedEnabled: false, onH: 7, onM: 0, offH: 18, offM: 0};
 
     const card = document.createElement("div");
     card.className = "device-card";
@@ -131,9 +130,9 @@ function createRelays() {
         <img src="gear.svg" alt="Config">
       </div>
       <div class="icon-circle" ondblclick="toggleSelector(${i})">
-        <img id="img${i}" src="${iconFiles[relayData[idx].icon]}">
+        <img id="img${i}" src="${iconFiles[0]}">
       </div>
-      <div class="device-name" id="name${i}" ondblclick="editName(this,${i})">${relayData[idx].name}</div>
+      <div class="device-name" id="name${i}" ondblclick="editName(this,${i})">Relé ${i}</div>
       <div class="status off" id="status${i}">DESLIGADO</div>
       <div>
         <button class="btn-on" onclick="toggle(${i},true)">ON</button>
@@ -155,8 +154,6 @@ function createRelays() {
       };
       sel.appendChild(opt);
     });
-
-    updateSingleCard(i);
   }
 }
 
@@ -184,51 +181,40 @@ function updateSummary(on, off) {
   document.getElementById("offCount").innerText = off;
 }
 
-// Atualiza apenas estado (não toca no agendamento)
 function handleStates(array) {
   let onCount = 0;
   array.forEach((state, i) => {
     if (relayData[i]) {
-      if (relayData[i].state !== state) {
-        relayData[i].state = state;
-        updateSingleCard(i + 1);
-      }
+      relayData[i].state = state;
+      updateSingleCard(i + 1);
       if (state) onCount++;
     }
   });
   updateSummary(onCount, NUM_RELAYS - onCount);
 }
 
-// Atualiza dados individuais (nome, ícone, estado) - não sobrescreve agendamento
 function handleSingleRelay(relayNum, data) {
   const idx = relayNum - 1;
   if (relayData[idx]) {
-    // Atualiza apenas campos que não são de agendamento
     if (data.state !== undefined) relayData[idx].state = data.state;
     if (data.name) relayData[idx].name = data.name.substring(0, 28);
     if (data.icon !== undefined) relayData[idx].icon = data.icon;
     updateSingleCard(relayNum);
-
-    if (data.state !== undefined) {
-      let onCount = 0;
-      for (let i = 0; i < NUM_RELAYS; i++) if (relayData[i]?.state) onCount++;
-      updateSummary(onCount, NUM_RELAYS - onCount);
-    }
   }
 }
 
-// Canal exclusivo - atualiza TODO o agendamento (fonte confiável)
+// Fonte principal do agendamento
 function handleFullSchedule(array) {
   array.forEach(item => {
     const idx = item.relay - 1;
     if (idx >= 0 && idx < NUM_RELAYS && relayData[idx]) {
-      relayData[idx].schedEnabled = item.schedEnabled;
-      relayData[idx].onH = item.onHour;
-      relayData[idx].onM = item.onMin;
-      relayData[idx].offH = item.offHour;
-      relayData[idx].offM = item.offMin;
+      relayData[idx].schedEnabled = !!item.schedEnabled;
+      relayData[idx].onH = item.onHour || 7;
+      relayData[idx].onM = item.onMin || 0;
+      relayData[idx].offH = item.offHour || 18;
+      relayData[idx].offM = item.offMin || 0;
       const gearEl = document.getElementById(`gear${item.relay}`);
-      if (gearEl) gearEl.classList.toggle("active", item.schedEnabled);
+      if (gearEl) gearEl.classList.toggle("active", relayData[idx].schedEnabled);
     }
   });
 }
@@ -244,13 +230,9 @@ function connectMQTT() {
   client = mqtt.connect("wss://broker.emqx.io:8084/mqtt", { clientId });
 
   client.on("connect", () => {
-    console.log("MQTT conectado!");
     document.getElementById("connStatus").innerText = "Conectado";
     document.getElementById("connStatus").style.background = "rgba(0,150,0,0.7)";
-
     client.subscribe("Bentech/casa_conectada/David/#");
-
-    // Força sincronização completa ao conectar
     sendCommand({ type: "request_status" });
   });
 
@@ -261,7 +243,7 @@ function connectMQTT() {
       if (topic.endsWith("/config")) {
         if (payload.num_relays && payload.num_relays !== NUM_RELAYS) {
           NUM_RELAYS = payload.num_relays;
-          createRelays(); // Recria tudo limpo
+          createRelays(); // <<< LIMPA TUDO, INCLUINDO AGENDAMENTO ANTIGO
         }
       } else if (topic.endsWith("/summary")) {
         updateSummary(payload.on || 0, payload.off || 0);
@@ -289,12 +271,29 @@ function connectMQTT() {
   });
 }
 
-// Pedido periódico garante sincronização mesmo se perder pacote
+// Fallback: se não receber schedule em 5s, força request
+let receivedSchedule = false;
+setTimeout(() => {
+  if (client && client.connected && !receivedSchedule) {
+    sendCommand({ type: "request_status" });
+  }
+}, 5000);
+
+// Marca que recebeu schedule
+const originalHandleFullSchedule = handleFullSchedule;
+handleFullSchedule = (array) => {
+  receivedSchedule = true;
+  originalHandleFullSchedule(array);
+};
+
+// Pedido periódico
 setInterval(() => {
   if (client && client.connected) {
     sendCommand({ type: "request_status" });
   }
 }, 15000);
+
+// ... (funções openModal, saveSchedule, toggle, etc. permanecem iguais ao anterior)
 
 function openModal(id) {
   currentRelay = id - 1;
@@ -363,7 +362,6 @@ function toggle(id, state) {
   btn.onmouseup = btn.onmouseleave = btn.ontouchend = () => clearTimeout(timer);
 });
 
-// Inicialização
 createRelays();
 connectMQTT();
 </script>
