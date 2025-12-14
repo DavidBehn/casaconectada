@@ -109,7 +109,7 @@ input[type="time"]{width:100%;padding:8px;border-radius:8px;border:1px solid #dd
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <script>
 const iconFiles = ["icon0.svg","icon1.svg","icon2.svg","icon3.svg","icon4.svg","icon5.svg"];
-const NUM_RELAYS = 12;  // <<< ALTERE SE MUDAR NO ESP32 >>>
+const NUM_RELAYS = 12;
 
 let currentRelay = 0;
 let client;
@@ -203,15 +203,19 @@ function connectMQTT() {
   client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {clientId: clientId});
 
   client.on('connect', () => {
+    console.log("MQTT CONECTADO COM SUCESSO!");
     document.getElementById("connStatus").innerText = "Conectado ao MQTT";
     document.getElementById("connStatus").style.background = "rgba(0,150,0,0.7)";
 
     client.subscribe('Bentech/casa_conectada/David/publisher', (err) => {
       if (!err) {
-        // Aguarda um pouco após o subscribe antes de pedir o status
+        console.log("SUBSCRIBE FEITO COM SUCESSO");
         setTimeout(() => {
+          console.log("ENVIANDO request_status INICIAL");
           sendCommand({type: "request_status"});
         }, 1000);
+      } else {
+        console.error("ERRO NO SUBSCRIBE:", err);
       }
     });
   });
@@ -219,33 +223,36 @@ function connectMQTT() {
   client.on('message', (topic, message) => {
     if (topic !== 'Bentech/casa_conectada/David/publisher') return;
     const msgStr = message.toString();
-    console.log("Mensagem MQTT recebida:", msgStr);  // Útil para debug
+    console.log("MENSAGEM MQTT RECEBIDA:", msgStr);
 
     try {
       const data = JSON.parse(msgStr);
+      console.log("JSON PARSEADO - ATUALIZANDO INTERFACE");
       updateStatus(data);
     } catch (err) {
-      console.error("Erro ao fazer parse do JSON:", err, msgStr);
+      console.error("ERRO AO PARSEAR JSON:", err, msgStr);
     }
   });
 
   client.on('close', () => {
+    console.log("MQTT DESCONECTADO - RECONECTANDO...");
     document.getElementById("connStatus").innerText = "Desconectado - reconectando...";
     document.getElementById("connStatus").style.background = "rgba(200,0,0,0.7)";
     setTimeout(connectMQTT, 3000);
   });
 
   client.on('error', (err) => {
-    console.error("Erro MQTT:", err);
+    console.error("ERRO MQTT:", err);
   });
 }
 
-// Pedido periódico de status (proteção contra perda de mensagens)
+// PEDIDO PERIÓDICO DE STATUS A CADA 20 SEGUNDOS
 setInterval(() => {
   if (client && client.connected) {
+    console.log("ENVIANDO request_status PERIÓDICO");
     sendCommand({type: "request_status"});
   }
-}, 30000);
+}, 20000);
 
 function openModal(id) {
   currentRelay = id - 1;
@@ -296,7 +303,6 @@ function toggle(id, state) {
   sendCommand({type:"toggle",relay:id,state:state});
 }
 
-// Botões Ligar/Desligar Todos (pressione longo)
 ["btnOnAll","btnOffAll"].forEach(b => {
   const btn = document.getElementById(b);
   const state = (b === "btnOnAll");
