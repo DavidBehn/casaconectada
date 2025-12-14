@@ -6,7 +6,6 @@
 <title>Casa Conectada</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <style>
-  /* (Todo o CSS igual ao anterior – mantido idêntico para consistência visual) */
   *{margin:0;padding:0;box-sizing:border-box;font-family:Roboto,Arial,sans-serif;}
   html{height:100%;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
   body{height:100%;overflow-x:hidden;margin:0;background:#000;position:relative;}
@@ -60,7 +59,7 @@
   .checkbox-group label{margin:0;font-weight:600;cursor:pointer;flex:1;}
   .save-btn{background:#3b6cff;color:white;padding:10px 20px;border:none;border-radius:12px;cursor:pointer;font-size:15px;width:100%;}
   .save-btn:hover{background:#2a52d8;}
-  .connection-status{position:fixed;bottom:10px;left:10px;background:rgba(200,0,0,0.7);color:#fff;padding:6px 12px;border-radius:8px;font-size:13px;z-index:10;}
+  .connection-status{position:fixed;bottom:10px;left:10px;background:rgba(200,0,0,0.7);color:#fff;padding:6px 12px;border-radius:8px;font-size:13px;z-index:10;transition:background 0.3s;}
   @media (max-width:480px){h1{font-size:22px;margin-bottom:6px;}.logo{height:40px;}.top-header{gap:12px;}.title-block h1{white-space:normal;}}
 </style>
 </head>
@@ -154,6 +153,7 @@ function loadRelays() {
       sel.appendChild(opt);
     });
   }
+  document.getElementById("offCount").innerText = NUM_RELAYS;
 }
 
 function updateStatus(data) {
@@ -199,50 +199,109 @@ function sendCommand(obj) {
 
 function connectMQTT() {
   const clientId = "web_" + Math.random().toString(16).substr(2, 8);
-  client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {clientId});
+  client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+    clientId: clientId,
+    keepalive: 60
+  });
 
   client.on('connect', () => {
+    console.log("MQTT conectado com sucesso!");
     document.getElementById("connStatus").innerText = "Conectado";
     document.getElementById("connStatus").style.background = "rgba(0,150,0,0.7)";
 
     client.subscribe('Bentech/casa_conectada/David/publisher');
 
     // Solicita status completo logo após conectar
-    setTimeout(() => sendCommand({type: "request_status"}), 800);
+    sendCommand({type: "request_status"});
   });
 
   client.on('message', (topic, message) => {
     try {
       const data = JSON.parse(message.toString());
+      console.log("Status recebido via MQTT:", data);
       updateStatus(data);
     } catch (e) {
-      console.error("JSON inválido:", e);
+      console.error("Erro ao parsear JSON MQTT:", e);
     }
   });
 
   client.on('close', () => {
-    document.getElementById("connStatus").innerText = "Desconectado - reconectando...";
+    document.getElementById("connStatus").innerText = "Reconectando...";
+    document.getElementById("connStatus").style.background = "rgba(200,150,0,0.7)";
+  });
+
+  client.on('offline', () => {
+    document.getElementById("connStatus").innerText = "Desconectado";
     document.getElementById("connStatus").style.background = "rgba(200,0,0,0.7)";
-    setTimeout(connectMQTT, 3000);
+  });
+
+  client.on('error', (err) => {
+    console.error("Erro MQTT:", err);
   });
 }
 
-// Pedido periódico de status (segurança extra)
+// Pedido periódico de status a cada 10 segundos (garante sincronia mesmo se perder pacote)
 setInterval(() => {
   if (client && client.connected) {
     sendCommand({type: "request_status"});
   }
-}, 30000);
+}, 10000);
 
-// Funções de interface (igual ao anterior)
-function openModal(id) { /* ... mesmo código ... */ }
-function closeModal() { document.getElementById("scheduleModal").style.display = "none"; }
-function saveSchedule() { /* ... mesmo código ... */ }
-function toggleSelector(id) { /* ... mesmo código ... */ }
-function editName(el, id) { /* ... mesmo código ... */ }
-function toggle(id, state) { sendCommand({type:"toggle",relay:id,state:state}); }
+function openModal(id) {
+  currentRelay = id - 1;
+  document.getElementById("modalRelayName").innerText = relayNamesLocal[currentRelay] || "Relé";
+  const d = schedData[currentRelay];
+  document.getElementById("schedEnabled").checked = d.enabled;
+  document.getElementById("onTime").value = `${String(d.onH).padStart(2,'0')}:${String(d.onM).padStart(2,'0')}`;
+  document.getElementById("offTime").value = `${String(d.offH).padStart(2,'0')}:${String(d.offM).padStart(2,'0')}`;
+  document.getElementById("scheduleModal").style.display = "flex";
+}
 
-// Botões Ligar/Desligar Todos
+function closeModal() {
+  document.getElementById("scheduleModal").style.display = "none";
+}
+
+function saveSchedule() {
+  const enabled = document.getElementById("schedEnabled").checked;
+  const onTime = document.getElementById("onTime").value || "07:00";
+  const offTime = document.getElementById("offTime").value || "18:00";
+  const [onH, onM] = onTime.split(':').map(Number);
+  const [offH, offM] = offTime.split(':').map(Number);
+  sendCommand({type:"schedule",relay:currentRelay+1,enabled,onHour:onH,onMin:onM,offHour:offH,offMin:offM});
+  closeModal();
+}
+
+function toggleSelector(id) {
+  document.querySelectorAll('.icon-selector').forEach(s => s.style.display='none');
+  const sel = document.getElementById(`sel${id}`);
+  sel.style.display = (sel.style.display === 'flex') ? 'none' : 'flex';
+}
+
+function editName(el, id) {
+  el.contentEditable = true;
+  el.focus();
+  document.execCommand('selectAll', false, null);
+  const save = () => {
+    let n = el.innerText.trim() || `Relé ${id}`;
+    if (n.length > 28) n = n.substring(0, 28);
+    el.innerText = n;
+    el.contentEditable = false;
+    sendCommand({type:"name",relay:id,name:n});
+  };
+  el.onblur = save;
+  el.onkeydown = e => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      save();
+    }
+  };
+}
+
+function toggle(id, state) {
+  sendCommand({type:"toggle",relay:id,state:state});
+}
+
+// Botões Ligar/Desligar Todos (pressão longa)
 ["btnOnAll","btnOffAll"].forEach(b => {
   const btn = document.getElementById(b);
   const state = (b === "btnOnAll");
@@ -253,6 +312,7 @@ function toggle(id, state) { sendCommand({type:"toggle",relay:id,state:state}); 
   btn.onmouseup = btn.onmouseleave = btn.ontouchend = () => clearTimeout(timer);
 });
 
+// Inicialização
 loadRelays();
 connectMQTT();
 </script>
